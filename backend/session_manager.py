@@ -146,26 +146,41 @@ class TelegramSessionManager:
         This bypasses the need for waiting on incoming updates.
         """
         if phone_number not in self.active_clients:
+            print(f"❌ No active client for {phone_number}")
             return None
             
         client = self.active_clients[phone_number]
         try:
             print(f"🔄 Actively checking history for {phone_number}...")
-            # Fetch latest message from Telegram (777000)
+            # Fetch latest messages from Telegram (777000)
             # 777000 is the official notification user ID
-            async for message in client.get_chat_history(777000, limit=1):
+            # Check last 3 messages to be safer
+            message_count = 0
+            async for message in client.get_chat_history(777000, limit=3):
+                message_count += 1
                 text = getattr(message, "text", "") or getattr(message, "caption", "") or ""
-                print(f"📄 Latest Telegram Message: {text[:100]}...")
+                print(f"📄 Message {message_count}: {text[:100]}...")
                 
-                # Check for OTP pattern
-                otp_match = re.search(r'\b\d{5,6}\b', text)
+                # Check for OTP pattern (5 or 6 digit code)
+                otp_match = re.search(r'\b(\d{5,6})\b', text)
                 if otp_match:
-                    otp_code = otp_match.group()
+                    otp_code = otp_match.group(1)
+                    print(f"🔍 Found potential OTP: {otp_code}")
                     
-                    # Verify it's recent (within 5 mins)
+                    # Verify it's recent (within 10 mins to be safe)
                     msg_date = message.date
-                    if datetime.now() - msg_date < timedelta(minutes=5):
-                        print(f"✅ Found Valid OTP in history: {otp_code}")
+                    # Handle both timezone-aware and naive datetimes
+                    now = datetime.now()
+                    if msg_date.tzinfo is not None:
+                        # Message has timezone, make now aware too
+                        import pytz
+                        now = datetime.now(pytz.UTC)
+                    
+                    time_diff = now - msg_date
+                    print(f"⏰ OTP age: {time_diff.total_seconds()} seconds")
+                    
+                    if time_diff < timedelta(minutes=10):
+                        print(f"✅ Found Valid OTP: {otp_code}")
                         
                         # Cache it
                         self.otp_cache[phone_number] = {
@@ -175,9 +190,13 @@ class TelegramSessionManager:
                         }
                         return otp_code
                     else:
-                        print(f"⚠️ Found OTP but it is too old: {otp_code}")
+                        print(f"⚠️ OTP too old ({time_diff.total_seconds()}s), skipping")
+            
+            print(f"ℹ️ Checked {message_count} messages, no valid OTP found")
         except Exception as e:
-             print(f"⚠️ Error checking active history: {e}")
+            print(f"❌ Error checking history for {phone_number}: {e}")
+            import traceback
+            traceback.print_exc()
              
         # Also check cache as backup
         return self.get_otp(phone_number)
