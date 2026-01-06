@@ -39,7 +39,8 @@ async def lifespan(app: FastAPI):
     await init_db()
     # Start bot in background after a short delay
     await asyncio.sleep(2)
-    asyncio.create_task(dp.start_polling(bot, skip_updates=True))
+    await bot.delete_webhook(drop_pending_updates=True) # Ensure no webhook conflicts
+    asyncio.create_task(dp.start_polling(bot))
     yield
     # Shutdown bot
     await dp.stop_polling()
