@@ -39,7 +39,7 @@ const App = () => {
             <NavItem to="/stock" icon={<Package size={20} />} label="Stock" />
             <NavItem to="/users" icon={<UsersIcon size={20} />} label="Users" />
             <NavItem to="/deposits" icon={<CreditCard size={20} />} label="Deposits" />
-            <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" />
+            <NavItem to="/settings" icon={<Settings size={20} />} label="Payment Settings" />
           </nav>
           <button
             onClick={handleLogout}
