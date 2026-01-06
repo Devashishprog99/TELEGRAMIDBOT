@@ -28,6 +28,42 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# --- Global Error Handler for Maximum Stability ---
+@dp.errors()
+async def error_handler(event, exception):
+    """
+    Global error handler to prevent bot crashes.
+    Catches all uncaught exceptions and logs them instead of crashing.
+    """
+    logger.error(f"❌ Uncaught error in {event.__class__.__name__}: {exception}", exc_info=True)
+    
+    # Try to notify user of error if it's a callback or message update
+    try:
+        if hasattr(event, 'update') and event.update:
+            update = event.update
+            
+            # Try to send error message to user
+            chat_id = None
+            if update.message:
+                chat_id = update.message.chat.id
+            elif update.callback_query:
+                chat_id = update.callback_query.message.chat.id
+            
+            if chat_id:
+                try:
+                    await bot.send_message(
+                        chat_id,
+                        "⚠️ An error occurred. Please try again or contact support if the issue persists.",
+                        reply_markup=get_back_to_main()
+                    )
+                except:
+                    pass  # If we can't send the message, just log it
+    except Exception as e:
+        logger.error(f"Error in error handler: {e}")
+    
+    # Return True to mark error as handled and prevent bot crash
+    return True
+
 # --- FSM States ---
 class DepositStates(StatesGroup):
     waiting_for_amount = State()

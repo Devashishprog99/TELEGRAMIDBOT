@@ -112,6 +112,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add timeout middleware for request protection
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+import time
+
+class TimeoutMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to prevent requests from hanging indefinitely.
+    Adds timeout protection to all HTTP requests.
+    """
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        try:
+            # Set timeout for request processing (30 seconds max)
+            response = await asyncio.wait_for(call_next(request), timeout=30.0)
+            process_time = time.time() - start_time
+            response.headers["X-Process-Time"] = str(process_time)
+            return response
+        except asyncio.TimeoutError:
+            logger.error(f"Request timeout: {request.url.path}")
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=504,
+                content={"detail": "Request processing timeout. Please try again."}
+            )
+        except Exception as e:
+            logger.error(f"Request error: {e}")
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error. Please try again."}
+            )
+
+app.add_middleware(TimeoutMiddleware)
+
 # Webhook Handler
 from aiogram.types import Update
 
