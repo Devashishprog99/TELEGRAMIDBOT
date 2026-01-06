@@ -33,31 +33,51 @@ class DepositUpdate(BaseModel):
 class LoginRequest(BaseModel):
     password: str
 
+# Webhook Configuration
+WEBHOOK_PATH = "/webhook"
+# BASE_URL should be env var, but hardcoding as per user request confirmation for reliability
+BASE_WEBHOOK_URL = "https://telegram-bot-full-e5lj.onrender.com"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB
-    try:
-        await init_db()
-    except Exception as e:
-        print(f"DB Init Failed: {e}")
-
-    # Start bot in background (Non-blocking)
-    async def start_bot_process():
-        try:
-            await asyncio.sleep(2)
-            await bot.delete_webhook(drop_pending_updates=True)
-            await dp.start_polling(bot)
-        except Exception as e:
-            print(f"Bot Startup Failed: {e}")
-
-    asyncio.create_task(start_bot_process())
+    await init_db()
+    
+    # Set Webhook on Startup
+    webhook_url = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
+    print(f"Setting webhook to: {webhook_url}")
+    await bot.set_webhook(
+        url=webhook_url,
+        allowed_updates=dp.resolve_used_update_types(),
+        drop_pending_updates=True
+    )
     
     yield
-    # Shutdown bot
-    await dp.stop_polling()
+    
+    # Delete Webhook on Shutdown
+    await bot.delete_webhook()
     await bot.session.close()
 
 app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Webhook Handler
+from aiogram.types import Update
+
+@app.post(WEBHOOK_PATH)
+async def bot_webhook(update: Update):
+    """
+    Handler for Telegram Webhook updates
+    """
+    return await dp.feed_update(bot, update)
 
 # Add CORS middleware to allow frontend dev server
 app.add_middleware(
