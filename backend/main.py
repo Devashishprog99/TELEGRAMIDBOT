@@ -466,7 +466,7 @@ async def verify_session_2fa(req: SessionVerify2FARequest):
     """Verify 2FA password"""
     try:
         generator = get_session_generator()
-        result = await generator.submit_2fa(req.session_id, req.password)
+        result = await generator.verify_2fa(req.session_id, req.password)
         return result
     except Exception as e:
         return {"success": False, "message": str(e)}
