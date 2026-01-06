@@ -1023,15 +1023,19 @@ async def process_get_otp(callback: types.CallbackQuery):
             
         except Exception as e:
             logger.error(f"Error starting OTP monitoring: {e}")
-            await callback.message.edit_text(
-                f"❌ <b>Error!</b>\n\n"
-                f"Failed to start OTP monitoring: {str(e)}\n\n"
-                "Please contact support.",
-                reply_markup=InlineKeyboardBuilder()
-                    .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
-                    .as_markup(),
-                parse_mode="HTML"
-            )
+            try:
+                await callback.message.edit_text(
+                    f"❌ <b>Error!</b>\n\n"
+                    f"Failed to start OTP monitoring: {str(e)}\n\n"
+                    "Please contact support.",
+                    reply_markup=InlineKeyboardBuilder()
+                        .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+                        .as_markup(),
+                    parse_mode="HTML"
+                )
+            except Exception as edit_error:
+                # If message edit fails (e.g., "message not modified"), just log it
+                logger.error(f"Could not edit error message: {edit_error}")
 
 
 async def show_otp_waiting(message: types.Message, phone_number: str, purchase_id: int, attempt: int = 0):
