@@ -684,6 +684,11 @@ async def process_main_menu(callback: types.CallbackQuery, state: FSMContext):
         user = result.scalar_one_or_none()
         if user:
             is_admin = user.is_admin
+            
+    # FORCE Admin Check from Env Var (Fixes "Missing Admin Panel" bug)
+    admin_telegram_id = os.getenv("ADMIN_TELEGRAM_ID")
+    if admin_telegram_id and str(callback.from_user.id) == admin_telegram_id:
+        is_admin = True
     
     # If message has photo (like QR code), delete it and send new message
     if callback.message.photo:
