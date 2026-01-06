@@ -59,7 +59,7 @@ def get_main_menu(is_admin=False):
     builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
     
     if is_admin:
-        admin_url = os.getenv("ADMIN_WEBAPP_URL", "http://localhost:5173")
+        admin_url = os.getenv("ADMIN_WEBAPP_URL", "https://telegram-bot-full.vercel.app")
         builder.row(InlineKeyboardButton(text="⚙️ Admin Web App", web_app=WebAppInfo(url=admin_url)))
     
     return builder.as_markup()
