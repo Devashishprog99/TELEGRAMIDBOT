@@ -89,8 +89,12 @@ async def cmd_start(message: types.Message):
             user = result.scalar_one_or_none()
 
             # Check if this telegram ID should be admin
-            admin_telegram_id = os.getenv("ADMIN_TELEGRAM_ID")
-            should_be_admin = admin_telegram_id and str(message.from_user.id) == admin_telegram_id
+            # Check if this telegram ID should be admin
+            admin_telegram_id = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
+            user_id_str = str(message.from_user.id)
+            should_be_admin = admin_telegram_id and user_id_str == admin_telegram_id
+            
+            logger.info(f"Start Check: User={user_id_str}, AdminEnv={admin_telegram_id}, Match={should_be_admin}")
 
             if not user:
                 user = User(
@@ -686,8 +690,12 @@ async def process_main_menu(callback: types.CallbackQuery, state: FSMContext):
             is_admin = user.is_admin
             
     # FORCE Admin Check from Env Var (Fixes "Missing Admin Panel" bug)
-    admin_telegram_id = os.getenv("ADMIN_TELEGRAM_ID")
-    if admin_telegram_id and str(callback.from_user.id) == admin_telegram_id:
+    admin_telegram_id = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
+    user_id_str = str(callback.from_user.id)
+    
+    logger.info(f"Menu Check: User={user_id_str}, AdminEnv={admin_telegram_id}")
+    
+    if admin_telegram_id and user_id_str == admin_telegram_id:
         is_admin = True
     
     # If message has photo (like QR code), delete it and send new message
