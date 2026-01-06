@@ -180,25 +180,39 @@ async def process_deposit_amount(message: types.Message, state: FSMContext):
         builder = InlineKeyboardBuilder()
         builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
         
-        if custom_qr_path and os.path.exists(custom_qr_path):
-            # Send Custom Static QR
-            text = (
-                f"<b>🏧 Deposit Amount: ₹{amount}</b>\n\n"
-                f"📍 <b>UPI ID:</b> <code>{target_upi_id}</code>\n\n"
-                "📸 <b>Scan the QR Code below to Pay</b>\n\n"
-                "✅ <b>Instructions:</b>\n"
-                "1. Open your UPI app.\n"
-                "2. Scan this QR or pay to the UPI ID.\n"
-                "3. Copy the <b>UTR / Transaction Ref ID</b>.\n\n"
-                "👉 <b>Please enter the UTR / Ref ID here after payment:</b>"
-            )
-            await message.answer_photo(
-                FSInputFile(custom_qr_path),
-                caption=text,
-                reply_markup=builder.as_markup(),
-                parse_mode="HTML"
-            )
-        else:
+        if custom_qr_path:
+            # Check if it's a URL (Supabase) or Local File
+            photo_input = None
+            if custom_qr_path.startswith("http"):
+                photo_input = custom_qr_path
+            elif os.path.exists(custom_qr_path):
+                photo_input = FSInputFile(custom_qr_path)
+            
+            if photo_input:
+                # Send Custom QR
+                text = (
+                    f"<b>🏧 Deposit Amount: ₹{amount}</b>\n\n"
+                    f"📍 <b>UPI ID:</b> <code>{target_upi_id}</code>\n\n"
+                    "📸 <b>Scan the QR Code below to Pay</b>\n\n"
+                    "✅ <b>Instructions:</b>\n"
+                    "1. Open your UPI app.\n"
+                    "2. Scan this QR or pay to the UPI ID.\n"
+                    "3. Copy the <b>UTR / Transaction Ref ID</b>.\n\n"
+                    "👉 <b>Please enter the UTR / Ref ID here after payment:</b>"
+                )
+                await message.answer_photo(
+                    photo_input,
+                    caption=text,
+                    reply_markup=builder.as_markup(),
+                    parse_mode="HTML"
+                )
+            else:
+                 # Fallback if file not found
+                 pass # Fall through to dynamic generation logic below? No, duplicate logic.
+                 # Let's restructure properly
+        
+        # If no custom QR or failed path, generate dynamic one
+        if not custom_qr_path or (not photo_input):
             # Generate Dynamic QR
             qr_data = f"upi://pay?pa={target_upi_id}&am={amount}&cu=INR&tn=Deposit"
             qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={qr_data}"
