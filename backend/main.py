@@ -35,8 +35,9 @@ class LoginRequest(BaseModel):
 
 # Webhook Configuration
 WEBHOOK_PATH = "/webhook"
-# BASE_URL should be env var, but hardcoding as per user request confirmation for reliability
-BASE_WEBHOOK_URL = "https://telegram-bot-full-e5lj.onrender.com"
+WEBHOOK_PATH = "/webhook"
+# BASE_URL from env var (for Railway/Render), default to Render URL if missing
+BASE_WEBHOOK_URL = os.getenv("BASE_WEBHOOK_URL", "https://telegram-bot-full-e5lj.onrender.com")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
