@@ -46,13 +46,19 @@ async def lifespan(app: FastAPI):
     await init_db()
     
     # Set Webhook on Startup
-    webhook_url = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
-    print(f"Setting webhook to: {webhook_url}", flush=True)
+    # Set Webhook on Startup
+    webhook_url = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
+    print(f"🔄 Setting webhook to: {webhook_url}", flush=True)
+    
     await bot.set_webhook(
         url=webhook_url,
         allowed_updates=dp.resolve_used_update_types(),
         drop_pending_updates=True
     )
+    
+    # Verify Webhook
+    info = await bot.get_webhook_info()
+    print(f"✅ Webhook Info: URL={info.url} | Custom Cert={info.has_custom_certificate} | Pending={info.pending_update_count}", flush=True)
     
     yield
     
