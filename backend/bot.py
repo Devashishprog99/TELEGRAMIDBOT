@@ -60,7 +60,10 @@ def get_main_menu(is_admin=False):
     
     if is_admin:
         admin_url = os.getenv("ADMIN_WEBAPP_URL", "https://telegram-bot-full.vercel.app")
-        builder.row(InlineKeyboardButton(text="⚙️ Admin Web App", web_app=WebAppInfo(url=admin_url)))
+        builder.row(
+            InlineKeyboardButton(text="⚙️ Admin Web App", web_app=WebAppInfo(url=admin_url)),
+            InlineKeyboardButton(text="💳 Payment Settings", web_app=WebAppInfo(url=admin_url + "/settings"))
+        )
     
     return builder.as_markup()
 
@@ -97,12 +100,11 @@ async def cmd_start(message: types.Message):
                     is_admin=should_be_admin
                 )
                 session.add(user)
-                await session.commit()
-            elif should_be_admin and not user.is_admin:
-                # User exists but needs admin status
-                user.is_admin = True
-                await session.commit()
-            
+            elif user.is_admin != should_be_admin:
+                # Update admin status if changed
+                user.is_admin = should_be_admin
+                
+            await session.commit()
             is_admin = user.is_admin
             
     except Exception as e:
