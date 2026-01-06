@@ -16,7 +16,7 @@ const Login = ({ onLogin }) => {
                 onLogin();
             }
         } catch (err) {
-            setError('Invalid Admin Password');
+            setError('Invalid Admin Password. Check ADMIN_PASSWORD in env.');
         }
     };
 

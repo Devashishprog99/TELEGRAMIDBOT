@@ -108,7 +108,7 @@ app.add_middleware(
 @app.post("/admin/login")
 async def admin_login(req: LoginRequest):
     admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
-    if req.password == admin_pass:
+    if req.password.strip() == admin_pass.strip():
         return {"status": "success", "token": "admin_token"} # Simple token for now
     raise HTTPException(status_code=401, detail="Invalid password")
 
@@ -187,36 +187,7 @@ async def get_deposits():
         result = await session.execute(select(Deposit).order_by(Deposit.created_at.desc()))
         return result.scalars().all()
 
-@app.get("/admin/deposits/enhanced")
-async def get_deposits_enhanced():
-    async with async_session() as session:
-        stmt = select(Deposit).order_by(Deposit.created_at.desc())
-        result = await session.execute(stmt)
-        deposits = result.scalars().all()
-        
-        # Manually join user data
-        enhanced_deposits = []
-        for deposit in deposits:
-            user_stmt = select(User).where(User.id == deposit.user_id)
-            user_res = await session.execute(user_stmt)
-            user = user_res.scalar_one_or_none()
-            
-            enhanced_deposits.append({
-                "id": deposit.id,
-                "amount": deposit.amount,
-                "upi_ref_id": deposit.upi_ref_id,
-                "screenshot_path": deposit.screenshot_path,
-                "status": deposit.status,
-                "created_at": deposit.created_at.isoformat(),
-                "user": {
-                    "id": user.id if user else None,
-                    "telegram_id": user.telegram_id if user else None,
-                    "username": user.username if user else None,
-                    "full_name": user.full_name if user else None
-                }
-            })
-        
-        return enhanced_deposits
+
 
 @app.patch("/admin/deposits/{deposit_id}")
 async def update_deposit(deposit_id: int, update_data: DepositUpdate):

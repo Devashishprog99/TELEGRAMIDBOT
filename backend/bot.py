@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from .database import async_session
 from .models import User, Country, Account, Purchase, Deposit, Settings
 from .session_manager import get_session_manager
+from .device_manager import DeviceManager
 from sqlalchemy import select, update
 
 load_dotenv()
@@ -647,14 +648,21 @@ async def process_purchase_history(callback: types.CallbackQuery):
         pur_res = await session.execute(pur_stmt)
         purchases = pur_res.scalars().all()
         
-    text = "🛒 <b>Purchase History</b>\n\n"
+    # Show purchase history as clickable buttons
+    text = "🛒 <b>Purchase History</b>\nSelect an account to manage sessions:\n\n"
+    builder = InlineKeyboardBuilder()
+    
     if not purchases:
-        text += "<i>No purchases found.</i>"
+        text = "🛒 <b>Purchase History</b>\n\n<i>No purchases found.</i>"
     else:
         for p in purchases:
-            text += f"📱 Account | ₹{p.amount} | {p.created_at.strftime('%Y-%m-%d')}\n"
-            
-    builder = InlineKeyboardBuilder()
+            # Use purchase ID for management
+            label = f"📱 Account #{p.id} | ₹{p.amount}"
+            builder.row(InlineKeyboardButton(
+                text=f"{label} | {p.created_at.strftime('%Y-%m-%d')}",
+                callback_data=f"manage_sess_{p.id}"
+            ))
+        
     builder.row(InlineKeyboardButton(text="🔙 Back to Profile", callback_data="btn_profile"))
     await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
 
@@ -1045,6 +1053,7 @@ async def show_otp_waiting(message: types.Message, phone_number: str, purchase_i
             f"• Follow Telegram's Terms of Service\n\n"
             f"✨ <b>Enjoy your new Telegram account!</b>",
             reply_markup=InlineKeyboardBuilder()
+                .row(InlineKeyboardButton(text="🛠️ Manage Sessions", callback_data=f"manage_sess_{purchase_id}"))
                 .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
                 .row(InlineKeyboardButton(text="🛍️ Buy More", callback_data="btn_accounts"))
                 .as_markup(),
@@ -1053,8 +1062,9 @@ async def show_otp_waiting(message: types.Message, phone_number: str, purchase_i
         await session_mgr.stop_monitoring(phone_number)
         return
     
-    # Check for OTP
-    otp_code = session_mgr.get_otp(phone_number)
+    # Check for OTP (Active Fetch)
+    # Using check_latest_otp instead of get_otp to robustly find code even if listener fails
+    otp_code = await session_mgr.check_latest_otp(phone_number)
     
     if otp_code:
         # Get 2FA password from database
@@ -1112,6 +1122,10 @@ async def show_otp_waiting(message: types.Message, phone_number: str, purchase_i
         await show_otp_waiting(message, phone_number, purchase_id, attempt + 1)
         
     # No OTP yet - show waiting message with manual check button
+    # Add timestamp to show it's active
+    current_time = datetime.now().strftime("%H:%M:%S")
+
+    # No OTP yet - show waiting message with manual check button
     text = (
         f"⏳ <b>Waiting for your login...</b>\n\n"
         f"📱 <b>Phone:</b> <code>{phone_number}</code>\n\n"
@@ -1122,22 +1136,49 @@ async def show_otp_waiting(message: types.Message, phone_number: str, purchase_i
         f"4️⃣ Request the verification code\n"
         f"5️⃣ Click 'Check for Code' button below!\n\n"
         f"💡 <i>Session monitoring is active</i>\n"
-        f"🔄 <i>Click the button to check for new codes</i>"
+        f"🔄 <i>Auto-checking... ({attempt}/24)</i>\n"
+        f"⏱️ <i>Refreshed: {current_time}</i>"
     )
-    await message.edit_text(
-        text,
-        reply_markup=InlineKeyboardBuilder()
-            .row(InlineKeyboardButton(
-                text="🔍 Check for Code",
-                callback_data=f"check_otp_{purchase_id}"
-            ))
-            .row(InlineKeyboardButton(
-                text="⏹️ Stop Waiting",
-                callback_data="btn_main_menu"
-            ))
-            .as_markup(),
-        parse_mode="HTML"
-    )
+    
+    try:
+        if attempt == 0:
+             await message.edit_text(
+                text,
+                reply_markup=InlineKeyboardBuilder()
+                    .row(InlineKeyboardButton(text="🔍 Check Code", callback_data=f"check_otp_{purchase_id}"))
+                    .row(InlineKeyboardButton(text="⏹️ Stop Waiting", callback_data="btn_main_menu"))
+                    .as_markup(),
+                parse_mode="HTML"
+            )
+        else:
+            await message.edit_text(
+                text,
+                reply_markup=InlineKeyboardBuilder()
+                    .row(InlineKeyboardButton(text="🔍 Check Code", callback_data=f"check_otp_{purchase_id}"))
+                    .row(InlineKeyboardButton(text="⏹️ Stop Waiting", callback_data="btn_main_menu"))
+                    .as_markup(),
+                parse_mode="HTML"
+            )
+    except Exception as e:
+        # Ignore "message is not modified" errors
+        if "message is not modified" not in str(e).lower():
+             logger.error(f"Error editing message: {e}")
+    
+    # Continue monitoring for 2 minutes (24 * 5s = 120s)
+    if attempt < 24:
+        await asyncio.sleep(5)
+        await show_otp_waiting(message, phone_number, purchase_id, attempt + 1)
+    else:
+         await message.edit_text(
+            f"❌ <b>Timeout!</b>\n\n"
+            f"We waited 2 minutes but didn't receive the code.\n"
+            f"Please try again or contact support.",
+            reply_markup=InlineKeyboardBuilder()
+                 .row(InlineKeyboardButton(text="🔄 Try Again", callback_data=f"get_otp_{purchase_id}"))
+                 .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+                 .as_markup(),
+            parse_mode="HTML"
+        )
 
 
 
@@ -1244,3 +1285,113 @@ async def handle_check_login(callback: types.CallbackQuery):
         
         await callback.answer("Checking login status...")
         await show_otp_waiting(callback.message, account.phone_number, purchase_id)
+
+# --- Device Management Handlers ---
+
+@dp.callback_query(F.data.startswith("manage_sess_"))
+async def process_manage_session(callback: types.CallbackQuery):
+    """List active sessions for a purchase"""
+    purchase_id = int(callback.data.split("_")[2])
+    
+    await callback.message.edit_text("🔄 <b>Connecting to Telegram...</b>\n\nPlease wait while we fetch active sessions...", parse_mode="HTML")
+    
+    async with async_session() as session:
+        # Get Purchase -> Account -> Session String
+        stmt = select(Purchase).where(Purchase.id == purchase_id)
+        res = await session.execute(stmt)
+        purchase = res.scalar_one_or_none()
+        
+        if not purchase:
+            await callback.message.edit_text("❌ Purchase not found.", reply_markup=get_back_to_main())
+            return
+            
+        stmt_acc = select(Account).where(Account.id == purchase.account_id)
+        res_acc = await session.execute(stmt_acc)
+        account = res_acc.scalar_one_or_none()
+        
+        if not account or not account.session_data:
+            await callback.message.edit_text("❌ No session data found for this account.", reply_markup=get_back_to_main())
+            return
+
+        try:
+            dm = DeviceManager()
+            sessions = await dm.get_active_sessions(account.session_data)
+            
+            if not sessions:
+                await callback.message.edit_text("❌ No active sessions found (weird).", reply_markup=get_back_to_main())
+                return
+                
+            text = f"📱 <b>Active Sessions for {account.phone_number}</b>\n\n"
+            text += "<i>Click '❌' to revoke a device instantly.</i>\n\n"
+            
+            builder = InlineKeyboardBuilder()
+            
+            for sess in sessions:
+                # Mark current session (Bot)
+                is_current = sess.get("is_current", False)
+                
+                device_name = f"{sess['device_model']} ({sess['platform']})"
+                ip = sess['ip']
+                
+                status_icon = "🟢" if is_current else "⚪"
+                
+                # Info text
+                text += f"{status_icon} <b>{device_name}</b>\n"
+                text += f"   ├ IP: {ip}\n"
+                text += f"   └ ID: <code>{sess['hash']}</code>\n\n"
+                
+                if not is_current:
+                    # Allow revoking other sessions
+                    btn_text = f"❌ Kill {sess['device_model'][:10]}..."
+                    builder.row(InlineKeyboardButton(text=btn_text, callback_data=f"kill_sess_{purchase_id}_{sess['hash']}"))
+            
+            builder.row(InlineKeyboardButton(text="🔄 Refresh", callback_data=f"manage_sess_{purchase_id}"))
+            builder.row(InlineKeyboardButton(text="🔙 Back", callback_data="btn_purchases"))
+            
+            await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+            
+        except Exception as e:
+            logger.error(f"Error managing sessions: {e}")
+            await callback.message.edit_text(
+                f"❌ <b>Error fetching sessions</b>\n\n{str(e)}",
+                reply_markup=get_back_to_main(),
+                parse_mode="HTML"
+            )
+
+@dp.callback_query(F.data.startswith("kill_sess_"))
+async def process_kill_session(callback: types.CallbackQuery):
+    """Terminate a session"""
+    parts = callback.data.split("_")
+    purchase_id = int(parts[2])
+    session_hash = int(parts[3])
+    
+    await callback.answer("Revoking access...", show_alert=False)
+    
+    async with async_session() as session:
+        # Get Account
+        stmt = select(Purchase).where(Purchase.id == purchase_id)
+        res = await session.execute(stmt)
+        purchase = res.scalar_one_or_none()
+        
+        if not purchase: return
+        
+        stmt_acc = select(Account).where(Account.id == purchase.account_id)
+        res_acc = await session.execute(stmt_acc)
+        account = res_acc.scalar_one_or_none()
+        
+        if not account: return
+
+        try:
+            dm = DeviceManager()
+            success = await dm.terminate_session(account.session_data, session_hash)
+            
+            if success:
+                await callback.answer("✅ Device revoked successfully!", show_alert=True)
+                # Refresh list
+                await process_manage_session(callback)
+            else:
+                await callback.answer("❌ Failed to revoke.", show_alert=True)
+                
+        except Exception as e:
+            logger.error(f"Error killing session: {e}")
+            await callback.answer(f"Error: {str(e)}", show_alert=True)

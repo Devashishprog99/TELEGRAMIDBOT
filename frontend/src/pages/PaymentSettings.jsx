@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Save, Upload, CreditCard, QrCode, CheckCircle, AlertCircle } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://welldecked-deflected-daniella.ngrok-free.dev';
-
-export default function PaymentSettings() {
-    const [settings, setSettings] = useState({ upi_id: '', qr_image: null });
+const PaymentSettings = () => {
+    const [upiId, setUpiId] = useState('');
+    const [qrImage, setQrImage] = useState(null); // File object
+    const [qrPreview, setQrPreview] = useState(''); // URL for preview
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState(null);
+    const [message, setMessage] = useState('');
+    const navigate = useNavigate();
+
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
     useEffect(() => {
         fetchSettings();
@@ -16,172 +19,168 @@ export default function PaymentSettings() {
 
     const fetchSettings = async () => {
         try {
-            const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get(`${API_BASE}/admin/settings/payment`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setSettings(data);
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                navigate('/login');
+                return;
+            }
+            // Add auth header if needed, currently API might be open or basic
+            // Assuming simple access for now based on main.py
+            const response = await axios.get(`${API_BASE}/admin/settings/payment`);
+            setUpiId(response.data.upi_id || '');
+            setQrPreview(response.data.qr_image || '');
             setLoading(false);
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error("Error fetching settings:", error);
+            setMessage("Failed to load settings.");
             setLoading(false);
         }
     };
 
-    const handleSaveUpi = async () => {
-        setSaving(true);
-        try {
-            const token = localStorage.getItem('adminToken');
-            await axios.post(
-                `${API_BASE}/admin/settings/payment`,
-                { upi_id: settings.upi_id },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setMessage({ type: 'success', text: 'UPI ID updated successfully!' });
-        } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to update UPI ID' });
-        } finally {
-            setSaving(false);
-            setTimeout(() => setMessage(null), 3000);
-        }
-    };
-
-    const handleFileUpload = async (e) => {
+    const handleImageChange = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (file) {
+            setQrImage(file);
+            // Create local preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setQrPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setMessage('');
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('upi_id', upiId);
+        if (qrImage) {
+            formData.append('qr_image', qrImage);
+        }
 
-        setSaving(true);
         try {
-            const token = localStorage.getItem('adminToken');
-            const { data } = await axios.post(
-                `${API_BASE}/admin/settings/qr`,
-                formData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data'
-                    }
+            await axios.post(`${API_BASE}/admin/settings/payment`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
                 }
-            );
-            if (data.success) {
-                setSettings(prev => ({ ...prev, qr_image: data.path }));
-                setMessage({ type: 'success', text: 'QR Code uploaded successfully!' });
-            }
-        } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to upload QR Code' });
+            });
+            setMessage('✅ Settings updated successfully!');
+            fetchSettings(); // Refresh to get server URLs
+        } catch (error) {
+            console.error("Error saving settings:", error);
+            setMessage('❌ Failed to save settings.');
         } finally {
             setSaving(false);
-            setTimeout(() => setMessage(null), 3000);
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-400">Loading settings...</div>;
+    if (loading) return <div className="p-8 text-white">Loading settings...</div>;
 
     return (
-        <div className="p-4 max-w-4xl mx-auto space-y-6">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <CreditCard className="w-8 h-8 text-blue-500" />
-                Payment Settings
-            </h2>
+        <div className="p-6 max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold text-white mb-8">💳 Payment Settings</h1>
 
-            {message && (
-                <div className={`p-4 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'
-                    }`}>
-                    {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-                    {message.text}
-                </div>
-            )}
+            <div className="bg-slate-800 rounded-xl p-8 border border-slate-700 shadow-lg">
+                <form onSubmit={handleSubmit} className="space-y-8">
 
-            {/* UPI ID Section */}
-            <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6">
-                <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                    <span className="bg-blue-600/20 text-blue-400 p-2 rounded-lg">UPI</span>
-                    UPI Configuration
-                </h3>
-
-                <div className="space-y-4">
+                    {/* UPI ID Section */}
                     <div>
-                        <label className="block text-gray-400 text-sm mb-2">Merchant UPI ID</label>
+                        <label className="block text-slate-400 text-sm font-medium mb-2">
+                            UPI ID (VPA)
+                        </label>
                         <input
                             type="text"
-                            value={settings.upi_id}
-                            onChange={(e) => setSettings({ ...settings, upi_id: e.target.value })}
-                            placeholder="e.g. merchant@upi"
-                            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                            value={upiId}
+                            onChange={(e) => setUpiId(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                            placeholder="e.g. business@upi"
+                            required
                         />
-                        <p className="text-gray-500 text-sm mt-2">
-                            This ID will be used to generate dynamic QR codes for user deposits.
+                        <p className="text-xs text-slate-500 mt-2">
+                            This UPI ID will be shown to users for manual deposits.
                         </p>
                     </div>
 
-                    <button
-                        onClick={handleSaveUpi}
-                        disabled={saving}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
-                    >
-                        <Save className="w-4 h-4" />
-                        {saving ? 'Saving...' : 'Save UPI ID'}
-                    </button>
-                </div>
-            </div>
+                    {/* QR Code Section */}
+                    <div>
+                        <label className="block text-slate-400 text-sm font-medium mb-4">
+                            QR Code Image
+                        </label>
 
-            {/* QR Code Section */}
-            <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6">
-                <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                    <QrCode className="w-6 h-6 text-purple-400" />
-                    Custom QR Code
-                </h3>
+                        <div className="flex flex-col md:flex-row gap-8 items-start">
 
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                        <p className="text-gray-400 text-sm">
-                            Upload a static QR code image. If uploaded, this image will be shown to users
-                            <b> INSTEAD</b> of the dynamic UPI QR.
-                        </p>
+                            {/* Preview Area */}
+                            <div className="w-48 h-48 bg-slate-900 rounded-lg border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden relative">
+                                {qrPreview ? (
+                                    <img
+                                        src={qrPreview}
+                                        alt="QR Code"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <span className="text-slate-600 text-sm">No QR Uploaded</span>
+                                )}
+                            </div>
 
-                        <div className="relative">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                                id="qr-upload"
-                            />
-                            <label
-                                htmlFor="qr-upload"
-                                className="cursor-pointer bg-gray-900 border-2 border-dashed border-gray-600 hover:border-blue-500 rounded-xl p-8 flex flex-col items-center justify-center transition-all group"
-                            >
-                                <Upload className="w-8 h-8 text-gray-500 group-hover:text-blue-500 mb-2 transition-colors" />
-                                <span className="text-gray-400 group-hover:text-white transition-colors">
-                                    Click to upload new QR
-                                </span>
-                            </label>
+                            {/* Upload Controls */}
+                            <div className="flex-1">
+                                <label className="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-block mb-3">
+                                    <span>Upload New QR Code</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="hidden"
+                                    />
+                                </label>
+                                <p className="text-sm text-slate-400">
+                                    Supports JPG, PNG, WEBP. <br />
+                                    Max file size: 5MB.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-xl p-4 border border-gray-700">
-                        {settings.qr_image ? (
-                            <>
-                                <p className="text-gray-400 text-sm mb-4">Current Active QR</p>
-                                <img
-                                    src={`${API_BASE}/${settings.qr_image}`}
-                                    alt="Payment QR"
-                                    className="max-w-[200px] rounded-lg border border-gray-600"
-                                />
-                            </>
-                        ) : (
-                            <div className="text-center text-gray-500">
-                                <QrCode className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                <p>No custom QR uploaded</p>
-                                <p className="text-xs text-blue-400 mt-2">Using Dynamic UPI QR</p>
-                            </div>
-                        )}
+                    {/* Submit Button */}
+                    <div className="pt-4 border-t border-slate-700">
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className={`w-full py-3 rounded-lg font-bold text-lg transition-all ${saving
+                                    ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-900/50'
+                                }`}
+                        >
+                            {saving ? 'Saving...' : '💾 Save Payment Settings'}
+                        </button>
                     </div>
-                </div>
+
+                    {/* Feedback Message */}
+                    {message && (
+                        <div className={`p-4 rounded-lg text-center font-medium ${message.includes('✅')
+                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                            {message}
+                        </div>
+                    )}
+
+                </form>
+            </div>
+
+            <div className="mt-8 bg-blue-500/10 border border-blue-500/20 p-6 rounded-xl">
+                <h3 className="text-blue-400 font-bold mb-2">ℹ️ How this works</h3>
+                <p className="text-slate-300 text-sm">
+                    Changes made here are <b>updated instantly</b> on the Telegram Bot.
+                    When a user clicks "Determine Payment", the bot fetches the latest UPI ID and QR Code from here directly.
+                    No need to restart the bot!
+                </p>
             </div>
         </div>
     );
-}
+};
+
+export default PaymentSettings;
