@@ -108,8 +108,10 @@ app.add_middleware(
 @app.post("/admin/login")
 async def admin_login(req: LoginRequest):
     admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+    print(f"🔐 Login Attempt: Input='{req.password}' | Env='{admin_pass}'") # DEBUG LOG
     if req.password.strip() == admin_pass.strip():
         return {"status": "success", "token": "admin_token"} # Simple token for now
+    print("❌ Password mismatch")
     raise HTTPException(status_code=401, detail="Invalid password")
 
 # --- Admin API Routes ---

@@ -16,7 +16,12 @@ const Login = ({ onLogin }) => {
                 onLogin();
             }
         } catch (err) {
-            setError('Invalid Admin Password. Check ADMIN_PASSWORD in env.');
+            console.error("Login Error Details:", err); // DEBUG LOG
+            if (err.response && err.response.status === 401) {
+                setError('Invalid Password. Please check.');
+            } else {
+                setError('Login Failed. Check console/network logs.');
+            }
         }
     };
 
