@@ -1054,16 +1054,31 @@ async def process_get_otp(callback: types.CallbackQuery):
                 session_string=account.session_data
             )
             
-            # Start the OTP waiting loop
-            await show_otp_waiting(callback.message, account.phone_number, purchase_id)
+            # Delete the old message and send a new one to avoid "message not modified" error
+            try:
+                await callback.message.delete()
+            except:
+                pass  # If delete fails, just continue
+            
+            # Send new message with OTP waiting screen
+            new_message = await bot.send_message(
+                callback.message.chat.id,
+                "🔄 <b>Starting OTP monitoring...</b>",
+                parse_mode="HTML"
+            )
+            
+            # Start the OTP waiting loop with new message
+            await show_otp_waiting(new_message, account.phone_number, purchase_id)
             
         except Exception as e:
             logger.error(f"Error starting OTP monitoring: {e}")
+            # Send error as new message instead of editing
             try:
-                await callback.message.edit_text(
+                await bot.send_message(
+                    callback.message.chat.id,
                     f"❌ <b>Error!</b>\n\n"
                     f"Failed to start OTP monitoring: {str(e)}\n\n"
-                    "Please contact support.",
+                    "Please try again or contact support.",
                     reply_markup=InlineKeyboardBuilder()
                         .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
                         .as_markup(),
