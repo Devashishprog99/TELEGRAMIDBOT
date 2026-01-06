@@ -183,6 +183,12 @@ async def get_accounts():
 @app.post("/admin/accounts")
 async def add_account(account: AccountCreate):
     async with async_session() as session:
+        # Check if phone number already exists
+        existing_stmt = select(Account).where(Account.phone_number == account.phone_number)
+        existing_res = await session.execute(existing_stmt)
+        if existing_res.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail=f"Phone number {account.phone_number} already exists in database")
+        
         db_account = Account(
             country_id=account.country_id,
             phone_number=account.phone_number,
