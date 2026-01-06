@@ -60,6 +60,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+@app.get("/")
+async def health_check():
+    return {"status": "ok", "mode": "webhook", "service": "Telegram Bot Backend"}
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
