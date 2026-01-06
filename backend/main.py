@@ -36,11 +36,22 @@ class LoginRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB
-    await init_db()
-    # Start bot in background after a short delay
-    await asyncio.sleep(2)
-    await bot.delete_webhook(drop_pending_updates=True) # Ensure no webhook conflicts
-    asyncio.create_task(dp.start_polling(bot))
+    try:
+        await init_db()
+    except Exception as e:
+        print(f"DB Init Failed: {e}")
+
+    # Start bot in background (Non-blocking)
+    async def start_bot_process():
+        try:
+            await asyncio.sleep(2)
+            await bot.delete_webhook(drop_pending_updates=True)
+            await dp.start_polling(bot)
+        except Exception as e:
+            print(f"Bot Startup Failed: {e}")
+
+    asyncio.create_task(start_bot_process())
+    
     yield
     # Shutdown bot
     await dp.stop_polling()
