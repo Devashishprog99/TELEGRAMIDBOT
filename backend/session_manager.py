@@ -100,21 +100,31 @@ class TelegramSessionManager:
             
             # Verify who we are logged in as (Best effort, ignore FLOOD_WAIT)
             try:
-                me = await client.get_me()
-                print(f"🟢 Started monitoring {phone_number}")
-                print(f"👤 Logged in as: {me.first_name} (ID: {me.id})")
-                print(f"📱 Account Phone: {me.phone_number}")
-            except Exception as e:
-                print(f"⚠️ Could not fetch user details (likely FloodWait): {e}")
-                print(f"🟢 Started monitoring {phone_number} (User details skipped)")
+            # CLEANUP: Remove old sessions to free memory (Render has 512MB limit)
+            await self.cleanup_stale_sessions()
             
             self.active_clients[phone_number] = client
             self.login_status[phone_number] = False
+            self.monitoring_start_times[phone_number] = datetime.now()
+            
+            print(f"Started monitoring session for {phone_number}")
             
         except Exception as e:
             print(f"❌ Error starting monitoring for {phone_number}: {str(e)}")
             raise
     
+    async def cleanup_stale_sessions(self):
+        """Remove sessions active for more than 10 minutes to save memory"""
+        now = datetime.now()
+        to_remove = []
+        for phone, start_time in self.monitoring_start_times.items():
+            if now - start_time > timedelta(minutes=10):
+                to_remove.append(phone)
+        
+        for phone in to_remove:
+            print(f"♻️ Cleaning up stale session: {phone}")
+            await self.stop_monitoring(phone)
+            
     async def stop_monitoring(self, phone_number: str):
         """Stop monitoring a session"""
         if phone_number in self.active_clients:
