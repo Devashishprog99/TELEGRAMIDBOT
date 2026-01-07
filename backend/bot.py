@@ -994,8 +994,13 @@ async def process_confirm_purchase(callback: types.CallbackQuery):
         await session.commit()
         await session.refresh(purchase)
         
-        # Show purchase success with OTP button
-        await callback.message.edit_text(
+        # Show purchase success with OTP button (DELETE+SEND to prevent crash)
+        try:
+            await callback.message.delete()
+        except:
+            pass
+        await bot.send_message(
+            callback.message.chat.id,
             f"✅ <b>Purchase Successful!</b>\n\n"
             f"📱 <b>Your Telegram ID:</b>\n"
             f"<code>{account.phone_number}</code>\n\n"
