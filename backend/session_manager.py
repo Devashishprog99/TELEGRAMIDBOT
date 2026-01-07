@@ -95,6 +95,29 @@ class TelegramSessionManager:
                         return
                     print(f"⚠️ Handler Error: {e}")
             
+            # Suppress Pyrogram's internal peer resolution errors
+            import asyncio
+            import logging
+            
+            # Reduce Pyrogram's log level to suppress peer errors
+            logging.getLogger("pyrogram").setLevel(logging.CRITICAL)
+            
+            # Custom exception handler for asyncio tasks
+            def custom_exception_handler(loop, context):
+                exception = context.get('exception')
+                if exception:
+                    # Suppress "Peer id invalid" errors silently
+                    if isinstance(exception, ValueError) and 'peer id invalid' in str(exception).lower():
+                        return  # Silently ignore
+                    if isinstance(exception, KeyError) and 'id not found' in str(exception).lower():
+                        return  # Silently ignore
+                # For other exceptions, use default handler
+                loop.default_exception_handler(context)
+            
+            # Set custom exception handler
+            loop = asyncio.get_event_loop()
+            loop.set_exception_handler(custom_exception_handler)
+            
             # Start the client
             await client.start()
             
