@@ -937,7 +937,12 @@ async def process_confirm_purchase(callback: types.CallbackQuery):
         
         # Check if user has sufficient balance
         if user.balance < country.price:
-            await callback.message.edit_text(
+            try:
+                await callback.message.delete()
+            except:
+                pass
+            await bot.send_message(
+                callback.message.chat.id,
                 f"❌ <b>Insufficient Balance!</b>\n\n"
                 f"💰 Your Balance: ₹{user.balance}\n"
                 f"💵 Required: ₹{country.price}\n"
@@ -961,7 +966,12 @@ async def process_confirm_purchase(callback: types.CallbackQuery):
         account = account_res.scalar_one_or_none()
         
         if not account:
-            await callback.message.edit_text(
+            try:
+                await callback.message.delete()
+            except:
+                pass
+            await bot.send_message(
+                callback.message.chat.id,
                 "❌ <b>Out of Stock!</b>\n\n"
                 f"Sorry, no {country.name} IDs available right now.",
                 reply_markup=InlineKeyboardBuilder()
