@@ -1048,9 +1048,14 @@ async def process_get_otp(callback: types.CallbackQuery):
         account = account_res.scalar_one_or_none()
         
         if not account or not account.session_data:
-            await callback.message.edit_text(
-                "❌ <b>Error!</b>\\n\\n"
-                "This account doesn't have session data configured.\\n"
+            try:
+                await callback.message.delete()
+            except:
+                pass
+            await bot.send_message(
+                callback.message.chat.id,
+                "❌ <b>Error!</b>\n\n"
+                "This account doesn't have session data configured.\n"
                 "Please contact support.",
                 reply_markup=InlineKeyboardBuilder()
                     .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
