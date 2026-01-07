@@ -12,6 +12,7 @@ from .database import async_session
 from .models import User, Country, Account, Purchase, Deposit, Settings
 from .session_manager import get_session_manager
 from .device_manager import DeviceManager
+from .broadcast import register_broadcast_handlers
 from sqlalchemy import select, update
 
 load_dotenv()
@@ -72,6 +73,9 @@ class DepositStates(StatesGroup):
     waiting_for_screenshot = State()
     confirming_screenshot = State()
 
+class BroadcastStates(StatesGroup):
+    waiting_for_message = State()
+
 # --- Keyboards ---
 
 def get_main_menu(is_admin=False):
@@ -111,6 +115,9 @@ def get_back_to_main():
 @dp.startup()
 async def on_startup():
     logger.info("Bot started and polling...")
+    # Register broadcast handlers
+    register_broadcast_handlers(dp, bot)
+
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
