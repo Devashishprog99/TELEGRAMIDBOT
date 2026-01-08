@@ -1498,722 +1498,721 @@ async def process_kill_session(callback: types.CallbackQuery):
         except Exception as e:
             logger.error(f"Error killing session: {e}")
             await callback.answer(f"Error: {str(e)}", show_alert=True)
-" " " 
- 
- C o m p l e t e   D e p o s i t   F l o w   f o r   T e l e g r a m   B o t 
- 
- H a n d l e s :   A m o u n t         U T R         S c r e e n s h o t         A d m i n   A p p r o v a l 
- 
- " " " 
- 
- 
- 
- #   A d d   t h i s   t o   b a c k e n d / b o t . p y   a f t e r   t h e   D e p o s i t S t a t e s   c l a s s   d e f i n i t i o n 
- 
- 
- 
- #   D e p o s i t   F l o w   H a n d l e r s 
- 
- 
- 
- 
- 
- @ d p . c a l l b a c k _ q u e r y ( F . d a t a   = =   " b t n _ d e p o s i t " ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ b u t t o n ( c a l l b a c k :   t y p e s . C a l l b a c k Q u e r y ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " H a n d l e   d e p o s i t   b u t t o n   c l i c k " " " 
- 
-         a w a i t   s a f e _ e d i t _ m e s s a g e ( 
- 
-                 c a l l b a c k , 
- 
-                 "  x    < b > A d d   B a l a n c e   t o   Y o u r   A c c o u n t < / b > \ n \ n " 
- 
-                 " P l e a s e   e n t e r   t h e   a m o u n t   y o u   w a n t   t o   d e p o s i t   ( i n      ) : \ n \ n " 
- 
-                 " E x a m p l e :   1 0 0 \ n " 
- 
-                 " M i n i m u m :      1 0 \ n " 
- 
-                 " M a x i m u m :      5 0 , 0 0 0 " , 
- 
-         ) 
- 
-         a w a i t   s t a t e . s e t _ s t a t e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ a m o u n t ) 
- 
- 
- 
- 
- 
- @ d p . m e s s a g e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ a m o u n t ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ a m o u n t ( m e s s a g e :   t y p e s . M e s s a g e ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " P r o c e s s   d e p o s i t   a m o u n t   i n p u t " " " 
- 
-         t r y : 
- 
-                 a m o u n t   =   f l o a t ( m e s s a g e . t e x t . s t r i p ( ) ) 
- 
-                 
- 
-                 i f   a m o u n t   <   1 0 : 
- 
-                         a w a i t   m e s s a g e . a n s w e r ( "   R  M i n i m u m   d e p o s i t   i s      1 0 .   P l e a s e   t r y   a g a i n . " ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 i f   a m o u n t   >   5 0 0 0 0 : 
- 
-                         a w a i t   m e s s a g e . a n s w e r ( "   R  M a x i m u m   d e p o s i t   i s      5 0 , 0 0 0 .   P l e a s e   t r y   a g a i n . " ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 #   S t o r e   a m o u n t   i n   s t a t e 
- 
-                 a w a i t   s t a t e . u p d a t e _ d a t a ( a m o u n t = a m o u n t ) 
- 
-                 
- 
-                 #   G e t   p a y m e n t   s e t t i n g s   f r o m   d a t a b a s e 
- 
-                 a s y n c   w i t h   a s y n c _ s e s s i o n ( )   a s   s e s s i o n : 
- 
-                         #   G e t   U P I   I D   f r o m   s e t t i n g s 
- 
-                         u p i _ s t m t   =   s e l e c t ( S e t t i n g s ) . w h e r e ( S e t t i n g s . k e y   = =   " u p i _ i d " ) 
- 
-                         u p i _ r e s   =   a w a i t   s e s s i o n . e x e c u t e ( u p i _ s t m t ) 
- 
-                         u p i _ s e t t i n g   =   u p i _ r e s . s c a l a r _ o n e _ o r _ n o n e ( ) 
- 
-                         u p i _ i d   =   u p i _ s e t t i n g . v a l u e   i f   u p i _ s e t t i n g   e l s e   " N o t   c o n f i g u r e d " 
- 
-                 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( 
- 
-                         f "  x    < b > P a y m e n t   D e t a i l s < / b > \ n \ n " 
- 
-                         f " A m o u n t   t o   P a y :      { a m o u n t } \ n " 
- 
-                         f " U P I   I D :   < c o d e > { u p i _ i d } < / c o d e > \ n \ n " 
- 
-                         f "  x 9   < b > N e x t   S t e p s : < / b > \ n " 
- 
-                         f " 1        S e n d      { a m o u n t }   t o   t h e   U P I   I D   a b o v e \ n " 
- 
-                         f " 2        A f t e r   p a y m e n t ,   e n t e r   t h e   U T R / T r a n s a c t i o n   I D \ n \ n " 
- 
-                         f "  x    U T R   i s   t h e   1 2 - d i g i t   r e f e r e n c e   n u m b e r   f r o m   y o u r   p a y m e n t " , 
- 
-                         p a r s e _ m o d e = " H T M L " 
- 
-                 ) 
- 
-                 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( 
- 
-                         " P l e a s e   e n t e r   y o u r   U T R / T r a n s a c t i o n   I D : " , 
- 
-                         p a r s e _ m o d e = " H T M L " 
- 
-                 ) 
- 
-                 
- 
-                 a w a i t   s t a t e . s e t _ s t a t e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ u t r ) 
- 
-                 
- 
-         e x c e p t   V a l u e E r r o r : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( "   R  I n v a l i d   a m o u n t .   P l e a s e   e n t e r   a   v a l i d   n u m b e r . " ) 
- 
- 
- 
- 
- 
- @ d p . m e s s a g e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ u t r ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ u t r ( m e s s a g e :   t y p e s . M e s s a g e ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " P r o c e s s   U T R   i n p u t " " " 
- 
-         u t r   =   m e s s a g e . t e x t . s t r i p ( ) 
- 
-         
- 
-         #   V a l i d a t e   U T R   f o r m a t   ( u s u a l l y   1 2   d i g i t s ) 
- 
-         i f   l e n ( u t r )   <   6 : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( "   R  U T R   s e e m s   t o o   s h o r t .   P l e a s e   c h e c k   a n d   t r y   a g a i n . " ) 
- 
-                 r e t u r n 
- 
-         
- 
-         #   S t o r e   U T R   i n   s t a t e 
- 
-         a w a i t   s t a t e . u p d a t e _ d a t a ( u t r = u t r ) 
- 
-         
- 
-         a w a i t   m e s s a g e . a n s w e r ( 
- 
-                 f "  S&   U T R   R e c o r d e d :   < c o d e > { u t r } < / c o d e > \ n \ n " 
- 
-                 f "  x    < b > U p l o a d   P a y m e n t   S c r e e n s h o t < / b > \ n \ n " 
- 
-                 f " P l e a s e   s e n d   a   s c r e e n s h o t   o f   y o u r   p a y m e n t   c o n f i r m a t i o n . " , 
- 
-                 p a r s e _ m o d e = " H T M L " 
- 
-         ) 
- 
-         
- 
-         a w a i t   s t a t e . s e t _ s t a t e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ s c r e e n s h o t ) 
- 
- 
- 
- 
- 
- @ d p . m e s s a g e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ s c r e e n s h o t ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ s c r e e n s h o t ( m e s s a g e :   t y p e s . M e s s a g e ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " P r o c e s s   s c r e e n s h o t   u p l o a d " " " 
- 
-         
- 
-         i f   n o t   m e s s a g e . p h o t o : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( 
- 
-                         "   R  P l e a s e   s e n d   a   p h o t o / s c r e e n s h o t   o f   y o u r   p a y m e n t . \ n \ n " 
- 
-                         "  x    C l i c k   t h e   a t t a c h m e n t   i c o n   a n d   s e l e c t   a   p h o t o . " 
- 
-                 ) 
- 
-                 r e t u r n 
- 
-         
- 
-         #   G e t   s t a t e   d a t a 
- 
-         d a t a   =   a w a i t   s t a t e . g e t _ d a t a ( ) 
- 
-         a m o u n t   =   d a t a . g e t ( ' a m o u n t ' ) 
- 
-         u t r   =   d a t a . g e t ( ' u t r ' ) 
- 
-         
- 
-         i f   n o t   a m o u n t   o r   n o t   u t r : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( "   R  S e s s i o n   e x p i r e d .   P l e a s e   s t a r t   o v e r   w i t h   / s t a r t " ) 
- 
-                 a w a i t   s t a t e . c l e a r ( ) 
- 
-                 r e t u r n 
- 
-         
- 
-         #   G e t   u s e r 
- 
-         a s y n c   w i t h   a s y n c _ s e s s i o n ( )   a s   s e s s i o n : 
- 
-                 u s e r _ s t m t   =   s e l e c t ( U s e r ) . w h e r e ( U s e r . t e l e g r a m _ i d   = =   m e s s a g e . f r o m _ u s e r . i d ) 
- 
-                 u s e r _ r e s   =   a w a i t   s e s s i o n . e x e c u t e ( u s e r _ s t m t ) 
- 
-                 u s e r   =   u s e r _ r e s . s c a l a r _ o n e _ o r _ n o n e ( ) 
- 
-                 
- 
-                 i f   n o t   u s e r : 
- 
-                         a w a i t   m e s s a g e . a n s w e r ( "   R  U s e r   n o t   f o u n d .   P l e a s e   u s e   / s t a r t   f i r s t . " ) 
- 
-                         a w a i t   s t a t e . c l e a r ( ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 #   C r e a t e   d e p o s i t   r e c o r d 
- 
-                 d e p o s i t   =   D e p o s i t ( 
- 
-                         u s e r _ i d = u s e r . i d , 
- 
-                         a m o u n t = a m o u n t , 
- 
-                         u p i _ r e f _ i d = u t r ,     #         T H I S   I S   T H E   U T R   F I E L D 
- 
-                         s c r e e n s h o t _ p a t h = f " p h o t o _ { m e s s a g e . p h o t o [ - 1 ] . f i l e _ i d } " , 
- 
-                         s t a t u s = " P E N D I N G " 
- 
-                 ) 
- 
-                 
- 
-                 s e s s i o n . a d d ( d e p o s i t ) 
- 
-                 a w a i t   s e s s i o n . c o m m i t ( ) 
- 
-                 a w a i t   s e s s i o n . r e f r e s h ( d e p o s i t ) 
- 
-         
- 
-         a w a i t   s t a t e . c l e a r ( ) 
- 
-         
- 
-         a w a i t   m e s s a g e . a n s w e r ( 
- 
-                 f "  S&   < b > D e p o s i t   R e q u e s t   S u b m i t t e d ! < / b > \ n \ n " 
- 
-                 f "  x    A m o u n t :      { a m o u n t } \ n " 
- 
-                 f "  x    U T R :   < c o d e > { u t r } < / c o d e > \ n " 
- 
-                 f "  x `  S t a t u s :   P e n d i n g   A d m i n   A p p r o v a l \ n \ n " 
- 
-                 f "      Y o u r   d e p o s i t   w i l l   b e   a p p r o v e d   w i t h i n   2 4   h o u r s . \ n " 
- 
-                 f " Y o u ' l l   b e   n o t i f i e d   o n c e   i t ' s   a p p r o v e d ! " , 
- 
-                 r e p l y _ m a r k u p = I n l i n e K e y b o a r d B u i l d e r ( ) 
- 
-                         . r o w ( I n l i n e K e y b o a r d B u t t o n ( t e x t = "  x    M a i n   M e n u " ,   c a l l b a c k _ d a t a = " b t n _ m a i n _ m e n u " ) ) 
- 
-                         . a s _ m a r k u p ( ) , 
- 
-                 p a r s e _ m o d e = " H T M L " 
- 
-         ) 
- 
- " " " 
- 
- I m p r o v e d   A c c o u n t   D i s p l a y   H a n d l e r 
- 
- S h o w s   a l l   c o u n t r i e s   w i t h   s t o c k   c o u n t   a n d   p r i c e   i n   a   c l e a n   f o r m a t 
- 
- " " " 
- 
- 
- 
- #   A d d   t h i s   t o   b a c k e n d / b o t . p y   ( r e p l a c e   e x i s t i n g   b t n _ a c c o u n t s   h a n d l e r ) 
- 
- 
- 
- @ d p . c a l l b a c k _ q u e r y ( F . d a t a   = =   " b t n _ a c c o u n t s " ) 
- 
- a s y n c   d e f   p r o c e s s _ a c c o u n t s _ b u t t o n ( c a l l b a c k :   t y p e s . C a l l b a c k Q u e r y ) : 
- 
-         " " " S h o w   a l l   c o u n t r i e s   w i t h   t h e i r   s t o c k   a n d   p r i c e s " " " 
- 
-         a s y n c   w i t h   a s y n c _ s e s s i o n ( )   a s   s e s s i o n : 
- 
-                 #   G e t   a l l   c o u n t r i e s 
- 
-                 c o u n t r i e s _ s t m t   =   s e l e c t ( C o u n t r y ) . o r d e r _ b y ( C o u n t r y . n a m e ) 
- 
-                 c o u n t r i e s _ r e s   =   a w a i t   s e s s i o n . e x e c u t e ( c o u n t r i e s _ s t m t ) 
- 
-                 c o u n t r i e s   =   c o u n t r i e s _ r e s . s c a l a r s ( ) . a l l ( ) 
- 
-                 
- 
-                 i f   n o t   c o u n t r i e s : 
- 
-                         a w a i t   s a f e _ e d i t _ m e s s a g e ( 
- 
-                                 c a l l b a c k , 
- 
-                                 "   R  < b > N o   C o u n t r i e s   A v a i l a b l e < / b > \ n \ n " 
- 
-                                 " P l e a s e   c o n t a c t   a d m i n   t o   a d d   c o u n t r i e s . " , 
- 
-                         ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 #   B u i l d   m e s s a g e   w i t h   a l l   c o u n t r i e s 
- 
-                 t e x t   =   "  x    < b > A v a i l a b l e   A c c o u n t s < / b > \ n \ n " 
- 
-                 
- 
-                 b u i l d e r   =   I n l i n e K e y b o a r d B u i l d e r ( ) 
- 
-                 
- 
-                 f o r   c o u n t r y   i n   c o u n t r i e s : 
- 
-                         #   C o u n t   a v a i l a b l e   s t o c k 
- 
-                         s t o c k _ s t m t   =   s e l e c t ( A c c o u n t ) . w h e r e ( 
- 
-                                 A c c o u n t . c o u n t r y _ i d   = =   c o u n t r y . i d , 
- 
-                                 A c c o u n t . i s _ s o l d   = =   F a l s e , 
- 
-                                 A c c o u n t . t y p e   = =   " I D " 
- 
-                         ) 
- 
-                         s t o c k _ r e s   =   a w a i t   s e s s i o n . e x e c u t e ( s t o c k _ s t m t ) 
- 
-                         s t o c k _ c o u n t   =   l e n ( s t o c k _ r e s . s c a l a r s ( ) . a l l ( ) ) 
- 
-                         
- 
-                         #   A d d   t o   m e s s a g e 
- 
-                         t e x t   + =   f " { c o u n t r y . e m o j i }   < b > { c o u n t r y . n a m e } < / b > \ n " 
- 
-                         t e x t   + =   f "  x    S t o c k :   { s t o c k _ c o u n t }   P c s   |    x    P r i c e :      { c o u n t r y . p r i c e : . 2 f } \ n \ n " 
- 
-                         
- 
-                         #   A d d   b u t t o n   o n l y   i f   s t o c k   a v a i l a b l e 
- 
-                         i f   s t o c k _ c o u n t   >   0 : 
- 
-                                 b u i l d e r . r o w ( I n l i n e K e y b o a r d B u t t o n ( 
- 
-                                         t e x t = f " { c o u n t r y . e m o j i }   { c o u n t r y . n a m e }   ( { s t o c k _ c o u n t }   a v a i l a b l e ) " , 
- 
-                                         c a l l b a c k _ d a t a = f " c o u n t r y _ { c o u n t r y . i d } " 
- 
-                                 ) ) 
- 
-                 
- 
-                 t e x t   + =   "  x    < i > S e l e c t   a   c o u n t r y   t o   p u r c h a s e < / i > " 
- 
-                 
- 
-                 #   A d d   b a c k   b u t t o n 
- 
-                 b u i l d e r . r o w ( I n l i n e K e y b o a r d B u t t o n ( t e x t = "  x    M a i n   M e n u " ,   c a l l b a c k _ d a t a = " b t n _ m a i n _ m e n u " ) ) 
- 
-                 
- 
-                 a w a i t   s a f e _ e d i t _ m e s s a g e ( c a l l b a c k ,   t e x t ,   r e p l y _ m a r k u p = b u i l d e r . a s _ m a r k u p ( ) ) 
- 
- " " " 
- 
- C l e a n   D e p o s i t   H a n d l e r s   -   A d d   t o   b o t . p y 
- 
- C a p t u r e s :   A m o u n t   - >   U T R   - >   S c r e e n s h o t   - >   D a t a b a s e 
- 
- " " " 
- 
- 
- 
- #   = = =   D E P O S I T   F L O W   H A N D L E R S   = = = 
- 
- 
- 
- @ d p . c a l l b a c k _ q u e r y ( F . d a t a   = =   " b t n _ d e p o s i t " ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ b u t t o n ( c a l l b a c k :   t y p e s . C a l l b a c k Q u e r y ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " H a n d l e   d e p o s i t   b u t t o n   c l i c k " " " 
- 
-         t r y : 
- 
-                 a w a i t   c a l l b a c k . m e s s a g e . d e l e t e ( ) 
- 
-         e x c e p t : 
- 
-                 p a s s 
- 
-         
- 
-         a w a i t   b o t . s e n d _ m e s s a g e ( 
- 
-                 c a l l b a c k . m e s s a g e . c h a t . i d , 
- 
-                 "  x    < b > A d d   B a l a n c e   t o   Y o u r   A c c o u n t < / b > \ n \ n " 
- 
-                 " P l e a s e   e n t e r   t h e   a m o u n t   y o u   w a n t   t o   d e p o s i t   ( i n      ) : \ n \ n " 
- 
-                 " E x a m p l e :   1 0 0 \ n " 
- 
-                 " M i n i m u m :      1 0 \ n " 
- 
-                 " M a x i m u m :      5 0 , 0 0 0 " , 
- 
-                 p a r s e _ m o d e = " H T M L " 
- 
-         ) 
- 
-         a w a i t   s t a t e . s e t _ s t a t e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ a m o u n t ) 
- 
-         a w a i t   c a l l b a c k . a n s w e r ( ) 
- 
- 
- 
- 
- 
- @ d p . m e s s a g e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ a m o u n t ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ a m o u n t ( m e s s a g e :   t y p e s . M e s s a g e ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " P r o c e s s   d e p o s i t   a m o u n t   i n p u t " " " 
- 
-         t r y : 
- 
-                 a m o u n t   =   f l o a t ( m e s s a g e . t e x t . s t r i p ( ) ) 
- 
-                 
- 
-                 i f   a m o u n t   <   1 0 : 
- 
-                         a w a i t   m e s s a g e . a n s w e r ( "   R  M i n i m u m   d e p o s i t   i s      1 0 .   P l e a s e   t r y   a g a i n . " ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 i f   a m o u n t   >   5 0 0 0 0 : 
- 
-                         a w a i t   m e s s a g e . a n s w e r ( "   R  M a x i m u m   d e p o s i t   i s      5 0 , 0 0 0 .   P l e a s e   t r y   a g a i n . " ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 a w a i t   s t a t e . u p d a t e _ d a t a ( a m o u n t = a m o u n t ) 
- 
-                 
- 
-                 #   G e t   U P I   I D   f r o m   s e t t i n g s 
- 
-                 a s y n c   w i t h   a s y n c _ s e s s i o n ( )   a s   s e s s i o n : 
- 
-                         u p i _ s t m t   =   s e l e c t ( S e t t i n g s ) . w h e r e ( S e t t i n g s . k e y   = =   " u p i _ i d " ) 
- 
-                         u p i _ r e s   =   a w a i t   s e s s i o n . e x e c u t e ( u p i _ s t m t ) 
- 
-                         u p i _ s e t t i n g   =   u p i _ r e s . s c a l a r _ o n e _ o r _ n o n e ( ) 
- 
-                         u p i _ i d   =   u p i _ s e t t i n g . v a l u e   i f   u p i _ s e t t i n g   e l s e   " p a y m e n t @ u p i " 
- 
-                 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( 
- 
-                         f "  x    < b > P a y m e n t   D e t a i l s < / b > \ n \ n " 
- 
-                         f " A m o u n t   t o   P a y :      { a m o u n t } \ n " 
- 
-                         f " U P I   I D :   < c o d e > { u p i _ i d } < / c o d e > \ n \ n " 
- 
-                         f "  x 9   < b > N e x t   S t e p s : < / b > \ n " 
- 
-                         f " 1        S e n d      { a m o u n t }   t o   t h e   U P I   I D   a b o v e \ n " 
- 
-                         f " 2        A f t e r   p a y m e n t ,   e n t e r   t h e   U T R / T r a n s a c t i o n   I D \ n \ n " 
- 
-                         f "  x    U T R   i s   t h e   1 2 - d i g i t   r e f e r e n c e   n u m b e r   f r o m   y o u r   p a y m e n t " , 
- 
-                         p a r s e _ m o d e = " H T M L " 
- 
-                 ) 
- 
-                 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( " P l e a s e   e n t e r   y o u r   U T R / T r a n s a c t i o n   I D : " ) 
- 
-                 a w a i t   s t a t e . s e t _ s t a t e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ u t r ) 
- 
-                 
- 
-         e x c e p t   V a l u e E r r o r : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( "   R  I n v a l i d   a m o u n t .   P l e a s e   e n t e r   a   v a l i d   n u m b e r . " ) 
- 
- 
- 
- 
- 
- @ d p . m e s s a g e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ u t r ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ u t r ( m e s s a g e :   t y p e s . M e s s a g e ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " P r o c e s s   U T R   i n p u t   -   C R I T I C A L :   T h i s   s a v e s   t h e   U T R " " " 
- 
-         u t r   =   m e s s a g e . t e x t . s t r i p ( ) 
- 
-         
- 
-         i f   l e n ( u t r )   <   6 : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( "   R  U T R   s e e m s   t o o   s h o r t .   P l e a s e   c h e c k   a n d   t r y   a g a i n . " ) 
- 
-                 r e t u r n 
- 
-         
- 
-         #   C R I T I C A L :   S a v e   U T R   i n   s t a t e 
- 
-         a w a i t   s t a t e . u p d a t e _ d a t a ( u t r = u t r ) 
- 
-         
- 
-         a w a i t   m e s s a g e . a n s w e r ( 
- 
-                 f "  S&   U T R   R e c o r d e d :   < c o d e > { u t r } < / c o d e > \ n \ n " 
- 
-                 f "  x    < b > U p l o a d   P a y m e n t   S c r e e n s h o t < / b > \ n \ n " 
- 
-                 f " P l e a s e   s e n d   a   s c r e e n s h o t   o f   y o u r   p a y m e n t   c o n f i r m a t i o n . " , 
- 
-                 p a r s e _ m o d e = " H T M L " 
- 
-         ) 
- 
-         
- 
-         a w a i t   s t a t e . s e t _ s t a t e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ s c r e e n s h o t ) 
- 
- 
- 
- 
- 
- @ d p . m e s s a g e ( D e p o s i t S t a t e s . w a i t i n g _ f o r _ s c r e e n s h o t ) 
- 
- a s y n c   d e f   p r o c e s s _ d e p o s i t _ s c r e e n s h o t ( m e s s a g e :   t y p e s . M e s s a g e ,   s t a t e :   F S M C o n t e x t ) : 
- 
-         " " " P r o c e s s   s c r e e n s h o t   a n d   s a v e   d e p o s i t   w i t h   U T R " " " 
- 
-         
- 
-         i f   n o t   m e s s a g e . p h o t o : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( 
- 
-                         "   R  P l e a s e   s e n d   a   p h o t o / s c r e e n s h o t   o f   y o u r   p a y m e n t . \ n \ n " 
- 
-                         "  x    C l i c k   t h e   a t t a c h m e n t   i c o n   a n d   s e l e c t   a   p h o t o . " 
- 
-                 ) 
- 
-                 r e t u r n 
- 
-         
- 
-         #   G e t   s t a t e   d a t a 
- 
-         d a t a   =   a w a i t   s t a t e . g e t _ d a t a ( ) 
- 
-         a m o u n t   =   d a t a . g e t ( ' a m o u n t ' ) 
- 
-         u t r   =   d a t a . g e t ( ' u t r ' ) 
- 
-         
- 
-         i f   n o t   a m o u n t   o r   n o t   u t r : 
- 
-                 a w a i t   m e s s a g e . a n s w e r ( "   R  S e s s i o n   e x p i r e d .   P l e a s e   s t a r t   o v e r   w i t h   / s t a r t " ) 
- 
-                 a w a i t   s t a t e . c l e a r ( ) 
- 
-                 r e t u r n 
- 
-         
- 
-         #   G e t   u s e r 
- 
-         a s y n c   w i t h   a s y n c _ s e s s i o n ( )   a s   s e s s i o n : 
- 
-                 u s e r _ s t m t   =   s e l e c t ( U s e r ) . w h e r e ( U s e r . t e l e g r a m _ i d   = =   m e s s a g e . f r o m _ u s e r . i d ) 
- 
-                 u s e r _ r e s   =   a w a i t   s e s s i o n . e x e c u t e ( u s e r _ s t m t ) 
- 
-                 u s e r   =   u s e r _ r e s . s c a l a r _ o n e _ o r _ n o n e ( ) 
- 
-                 
- 
-                 i f   n o t   u s e r : 
- 
-                         a w a i t   m e s s a g e . a n s w e r ( "   R  U s e r   n o t   f o u n d .   P l e a s e   u s e   / s t a r t   f i r s t . " ) 
- 
-                         a w a i t   s t a t e . c l e a r ( ) 
- 
-                         r e t u r n 
- 
-                 
- 
-                 #   C R I T I C A L :   C r e a t e   d e p o s i t   w i t h   U T R   i n   u p i _ r e f _ i d   f i e l d 
- 
-                 d e p o s i t   =   D e p o s i t ( 
- 
-                         u s e r _ i d = u s e r . i d , 
- 
-                         a m o u n t = a m o u n t , 
- 
-                         u p i _ r e f _ i d = u t r ,     #         T H I S   I S   W H E R E   U T R   I S   S A V E D 
- 
-                         s c r e e n s h o t _ p a t h = f " p h o t o _ { m e s s a g e . p h o t o [ - 1 ] . f i l e _ i d } " , 
- 
-                         s t a t u s = " P E N D I N G " 
- 
-                 ) 
- 
-                 
- 
-                 s e s s i o n . a d d ( d e p o s i t ) 
- 
-                 a w a i t   s e s s i o n . c o m m i t ( ) 
- 
-                 a w a i t   s e s s i o n . r e f r e s h ( d e p o s i t ) 
- 
-         
- 
-         a w a i t   s t a t e . c l e a r ( ) 
- 
-         
- 
-         a w a i t   m e s s a g e . a n s w e r ( 
- 
-                 f "  S&   < b > D e p o s i t   R e q u e s t   S u b m i t t e d ! < / b > \ n \ n " 
- 
-                 f "  x    A m o u n t :      { a m o u n t } \ n " 
- 
-                 f "  x    U T R :   < c o d e > { u t r } < / c o d e > \ n " 
- 
-                 f "  x `  S t a t u s :   P e n d i n g   A d m i n   A p p r o v a l \ n \ n " 
- 
-                 f "      Y o u r   d e p o s i t   w i l l   b e   a p p r o v e d   w i t h i n   2 4   h o u r s . \ n " 
- 
-                 f " Y o u ' l l   b e   n o t i f i e d   o n c e   i t ' s   a p p r o v e d ! " , 
- 
-                 r e p l y _ m a r k u p = I n l i n e K e y b o a r d B u i l d e r ( ) 
- 
-                         . r o w ( I n l i n e K e y b o a r d B u t t o n ( t e x t = "  x    M a i n   M e n u " ,   c a l l b a c k _ d a t a = " b t n _ m a i n _ m e n u " ) ) 
- 
-                         . a s _ m a r k u p ( ) , 
- 
-                 p a r s e _ m o d e = " H T M L " 
- 
-         ) 
- 
- 
+"""
+
+Complete Deposit Flow for Telegram Bot
+
+Handles: Amount     UTR     Screenshot     Admin Approval
+
+"""
+
+
+
+# Add this to backend/bot.py after the DepositStates class definition
+
+
+
+# Deposit Flow Handlers
+
+
+
+
+
+@dp.callback_query(F.data == "btn_deposit")
+
+async def process_deposit_button(callback: types.CallbackQuery, state: FSMContext):
+
+    """Handle deposit button click"""
+
+    await safe_edit_message(
+
+        callback,
+
+        "x  <b>Add Balance to Your Account</b>\n\n"
+
+        "Please enter the amount you want to deposit (in  ):\n\n"
+
+        "Example: 100\n"
+
+        "Minimum:  10\n"
+
+        "Maximum:  50,000",
+
+    )
+
+    await state.set_state(DepositStates.waiting_for_amount)
+
+
+
+
+
+@dp.message(DepositStates.waiting_for_amount)
+
+async def process_deposit_amount(message: types.Message, state: FSMContext):
+
+    """Process deposit amount input"""
+
+    try:
+
+        amount = float(message.text.strip())
+
+        
+
+        if amount < 10:
+
+            await message.answer("R Minimum deposit is  10. Please try again.")
+
+            return
+
+        
+
+        if amount > 50000:
+
+            await message.answer("R Maximum deposit is  50,000. Please try again.")
+
+            return
+
+        
+
+        # Store amount in state
+
+        await state.update_data(amount=amount)
+
+        
+
+        # Get payment settings from database
+
+        async with async_session() as session:
+
+            # Get UPI ID from settings
+
+            upi_stmt = select(Settings).where(Settings.key == "upi_id")
+
+            upi_res = await session.execute(upi_stmt)
+
+            upi_setting = upi_res.scalar_one_or_none()
+
+            upi_id = upi_setting.value if upi_setting else "Not configured"
+
+        
+
+        await message.answer(
+
+            f"x  <b>Payment Details</b>\n\n"
+
+            f"Amount to Pay:  {amount}\n"
+
+            f"UPI ID: <code>{upi_id}</code>\n\n"
+
+            f"x 9  <b>Next Steps:</b>\n"
+
+            f"1 Send  {amount} to the UPI ID above\n"
+
+            f"2 After payment, enter the UTR/Transaction ID\n\n"
+
+            f"x  UTR is the 12-digit reference number from your payment",
+
+            parse_mode="HTML"
+
+        )
+
+        
+
+        await message.answer(
+
+            "Please enter your UTR/Transaction ID:",
+
+            parse_mode="HTML"
+
+        )
+
+        
+
+        await state.set_state(DepositStates.waiting_for_utr)
+
+        
+
+    except ValueError:
+
+        await message.answer("R Invalid amount. Please enter a valid number.")
+
+
+
+
+
+@dp.message(DepositStates.waiting_for_utr)
+
+async def process_deposit_utr(message: types.Message, state: FSMContext):
+
+    """Process UTR input"""
+
+    utr = message.text.strip()
+
+    
+
+    # Validate UTR format (usually 12 digits)
+
+    if len(utr) < 6:
+
+        await message.answer("R UTR seems too short. Please check and try again.")
+
+        return
+
+    
+
+    # Store UTR in state
+
+    await state.update_data(utr=utr)
+
+    
+
+    await message.answer(
+
+        f"S&  UTR Recorded: <code>{utr}</code>\n\n"
+
+        f"x  <b>Upload Payment Screenshot</b>\n\n"
+
+        f"Please send a screenshot of your payment confirmation.",
+
+        parse_mode="HTML"
+
+    )
+
+    
+
+    await state.set_state(DepositStates.waiting_for_screenshot)
+
+
+
+
+
+@dp.message(DepositStates.waiting_for_screenshot)
+
+async def process_deposit_screenshot(message: types.Message, state: FSMContext):
+
+    """Process screenshot upload"""
+
+    
+
+    if not message.photo:
+
+        await message.answer(
+
+            "R Please send a photo/screenshot of your payment.\n\n"
+
+            "x  Click the attachment icon and select a photo."
+
+        )
+
+        return
+
+    
+
+    # Get state data
+
+    data = await state.get_data()
+
+    amount = data.get('amount')
+
+    utr = data.get('utr')
+
+    
+
+    if not amount or not utr:
+
+        await message.answer("R Session expired. Please start over with /start")
+
+        await state.clear()
+
+        return
+
+    
+
+    # Get user
+
+    async with async_session() as session:
+
+        user_stmt = select(User).where(User.telegram_id == message.from_user.id)
+
+        user_res = await session.execute(user_stmt)
+
+        user = user_res.scalar_one_or_none()
+
+        
+
+        if not user:
+
+            await message.answer("R User not found. Please use /start first.")
+
+            await state.clear()
+
+            return
+
+        
+
+        # Create deposit record
+
+        deposit = Deposit(
+
+            user_id=user.id,
+
+            amount=amount,
+
+            upi_ref_id=utr,  #    THIS IS THE UTR FIELD
+
+            screenshot_path=f"photo_{message.photo[-1].file_id}",
+
+            status="PENDING"
+
+        )
+
+        
+
+        session.add(deposit)
+
+        await session.commit()
+
+        await session.refresh(deposit)
+
+    
+
+    await state.clear()
+
+    
+
+    await message.answer(
+
+        f"S&  <b>Deposit Request Submitted!</b>\n\n"
+
+        f"x  Amount:  {amount}\n"
+
+        f"x   UTR: <code>{utr}</code>\n"
+
+        f"x ` Status: Pending Admin Approval\n\n"
+
+        f" Your deposit will be approved within 24 hours.\n"
+
+        f"You'll be notified once it's approved!",
+
+        reply_markup=InlineKeyboardBuilder()
+
+            .row(InlineKeyboardButton(text="x Main Menu", callback_data="btn_main_menu"))
+
+            .as_markup(),
+
+        parse_mode="HTML"
+
+    )
+
+"""
+
+Improved Account Display Handler
+
+Shows all countries with stock count and price in a clean format
+
+"""
+
+
+
+# Add this to backend/bot.py (replace existing btn_accounts handler)
+
+
+
+@dp.callback_query(F.data == "btn_accounts")
+
+async def process_accounts_button(callback: types.CallbackQuery):
+
+    """Show all countries with their stock and prices"""
+
+    async with async_session() as session:
+
+        # Get all countries
+
+        countries_stmt = select(Country).order_by(Country.name)
+
+        countries_res = await session.execute(countries_stmt)
+
+        countries = countries_res.scalars().all()
+
+        
+
+        if not countries:
+
+            await safe_edit_message(
+
+                callback,
+
+                "R <b>No Countries Available</b>\n\n"
+
+                "Please contact admin to add countries.",
+
+            )
+
+            return
+
+        
+
+        # Build message with all countries
+
+        text = "x  <b>Available Accounts</b>\n\n"
+
+        
+
+        builder = InlineKeyboardBuilder()
+
+        
+
+        for country in countries:
+
+            # Count available stock
+
+            stock_stmt = select(Account).where(
+
+                Account.country_id == country.id,
+
+                Account.is_sold == False,
+
+                Account.type == "ID"
+
+            )
+
+            stock_res = await session.execute(stock_stmt)
+
+            stock_count = len(stock_res.scalars().all())
+
+            
+
+            # Add to message
+
+            text += f"{country.emoji} <b>{country.name}</b>\n"
+
+            text += f"x  Stock: {stock_count} Pcs | x  Price:  {country.price:.2f}\n\n"
+
+            
+
+            # Add button only if stock available
+
+            if stock_count > 0:
+
+                builder.row(InlineKeyboardButton(
+
+                    text=f"{country.emoji} {country.name} ({stock_count} available)",
+
+                    callback_data=f"country_{country.id}"
+
+                ))
+
+        
+
+        text += "x  <i>Select a country to purchase</i>"
+
+        
+
+        # Add back button
+
+        builder.row(InlineKeyboardButton(text="x Main Menu", callback_data="btn_main_menu"))
+
+        
+
+        await safe_edit_message(callback, text, reply_markup=builder.as_markup())
+
+"""
+
+Clean Deposit Handlers - Add to bot.py
+
+Captures: Amount -> UTR -> Screenshot -> Database
+
+"""
+
+
+
+# === DEPOSIT FLOW HANDLERS ===
+
+
+
+@dp.callback_query(F.data == "btn_deposit")
+
+async def process_deposit_button(callback: types.CallbackQuery, state: FSMContext):
+
+    """Handle deposit button click"""
+
+    try:
+
+        await callback.message.delete()
+
+    except:
+
+        pass
+
+    
+
+    await bot.send_message(
+
+        callback.message.chat.id,
+
+        "x  <b>Add Balance to Your Account</b>\n\n"
+
+        "Please enter the amount you want to deposit (in  ):\n\n"
+
+        "Example: 100\n"
+
+        "Minimum:  10\n"
+
+        "Maximum:  50,000",
+
+        parse_mode="HTML"
+
+    )
+
+    await state.set_state(DepositStates.waiting_for_amount)
+
+    await callback.answer()
+
+
+
+
+
+@dp.message(DepositStates.waiting_for_amount)
+
+async def process_deposit_amount(message: types.Message, state: FSMContext):
+
+    """Process deposit amount input"""
+
+    try:
+
+        amount = float(message.text.strip())
+
+        
+
+        if amount < 10:
+
+            await message.answer("R Minimum deposit is  10. Please try again.")
+
+            return
+
+        
+
+        if amount > 50000:
+
+            await message.answer("R Maximum deposit is  50,000. Please try again.")
+
+            return
+
+        
+
+        await state.update_data(amount=amount)
+
+        
+
+        # Get UPI ID from settings
+
+        async with async_session() as session:
+
+            upi_stmt = select(Settings).where(Settings.key == "upi_id")
+
+            upi_res = await session.execute(upi_stmt)
+
+            upi_setting = upi_res.scalar_one_or_none()
+
+            upi_id = upi_setting.value if upi_setting else "payment@upi"
+
+        
+
+        await message.answer(
+
+            f"x  <b>Payment Details</b>\n\n"
+
+            f"Amount to Pay:  {amount}\n"
+
+            f"UPI ID: <code>{upi_id}</code>\n\n"
+
+            f"x 9  <b>Next Steps:</b>\n"
+
+            f"1 Send  {amount} to the UPI ID above\n"
+
+            f"2 After payment, enter the UTR/Transaction ID\n\n"
+
+            f"x  UTR is the 12-digit reference number from your payment",
+
+            parse_mode="HTML"
+
+        )
+
+        
+
+        await message.answer("Please enter your UTR/Transaction ID:")
+
+        await state.set_state(DepositStates.waiting_for_utr)
+
+        
+
+    except ValueError:
+
+        await message.answer("R Invalid amount. Please enter a valid number.")
+
+
+
+
+
+@dp.message(DepositStates.waiting_for_utr)
+
+async def process_deposit_utr(message: types.Message, state: FSMContext):
+
+    """Process UTR input - CRITICAL: This saves the UTR"""
+
+    utr = message.text.strip()
+
+    
+
+    if len(utr) < 6:
+
+        await message.answer("R UTR seems too short. Please check and try again.")
+
+        return
+
+    
+
+    # CRITICAL: Save UTR in state
+
+    await state.update_data(utr=utr)
+
+    
+
+    await message.answer(
+
+        f"S&  UTR Recorded: <code>{utr}</code>\n\n"
+
+        f"x  <b>Upload Payment Screenshot</b>\n\n"
+
+        f"Please send a screenshot of your payment confirmation.",
+
+        parse_mode="HTML"
+
+    )
+
+    
+
+    await state.set_state(DepositStates.waiting_for_screenshot)
+
+
+
+
+
+@dp.message(DepositStates.waiting_for_screenshot)
+
+async def process_deposit_screenshot(message: types.Message, state: FSMContext):
+
+    """Process screenshot and save deposit with UTR"""
+
+    
+
+    if not message.photo:
+
+        await message.answer(
+
+            "R Please send a photo/screenshot of your payment.\n\n"
+
+            "x  Click the attachment icon and select a photo."
+
+        )
+
+        return
+
+    
+
+    # Get state data
+
+    data = await state.get_data()
+
+    amount = data.get('amount')
+
+    utr = data.get('utr')
+
+    
+
+    if not amount or not utr:
+
+        await message.answer("R Session expired. Please start over with /start")
+
+        await state.clear()
+
+        return
+
+    
+
+    # Get user
+
+    async with async_session() as session:
+
+        user_stmt = select(User).where(User.telegram_id == message.from_user.id)
+
+        user_res = await session.execute(user_stmt)
+
+        user = user_res.scalar_one_or_none()
+
+        
+
+        if not user:
+
+            await message.answer("R User not found. Please use /start first.")
+
+            await state.clear()
+
+            return
+
+        
+
+        # CRITICAL: Create deposit with UTR in upi_ref_id field
+
+        deposit = Deposit(
+
+            user_id=user.id,
+
+            amount=amount,
+
+            upi_ref_id=utr,  #    THIS IS WHERE UTR IS SAVED
+
+            screenshot_path=f"photo_{message.photo[-1].file_id}",
+
+            status="PENDING"
+
+        )
+
+        
+
+        session.add(deposit)
+
+        await session.commit()
+
+        await session.refresh(deposit)
+
+    
+
+    await state.clear()
+
+    
+
+    await message.answer(
+
+        f"S&  <b>Deposit Request Submitted!</b>\n\n"
+
+        f"x  Amount:  {amount}\n"
+
+        f"x   UTR: <code>{utr}</code>\n"
+
+        f"x ` Status: Pending Admin Approval\n\n"
+
+        f" Your deposit will be approved within 24 hours.\n"
+
+        f"You'll be notified once it's approved!",
+
+        reply_markup=InlineKeyboardBuilder()
+
+            .row(InlineKeyboardButton(text="x Main Menu", callback_data="btn_main_menu"))
+
+            .as_markup(),
+
+        parse_mode="HTML"
+
+    )
+
