@@ -13,6 +13,7 @@ from .database import async_session
 from .models import User, Country, Account, Purchase, Deposit, Settings
 from .session_manager import get_session_manager
 from .device_manager import DeviceManager
+from .session_handlers import register_session_handlers
 from sqlalchemy import select, update
 
 load_dotenv()
