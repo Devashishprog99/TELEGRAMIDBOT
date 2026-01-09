@@ -71,6 +71,24 @@ async def error_handler(event: types.ErrorEvent):
     # Return True to mark error as handled and prevent bot crash
     return True
 
+# --- Safe Message Sender ---
+async def safe_send(callback: types.CallbackQuery, text: str, reply_markup=None, parse_mode="HTML"):
+    """
+    Universal safe message sender - always deletes old message and sends new one.
+    This prevents ALL "message not modified" errors.
+    """
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.debug(f"Could not delete message: {e}")
+    
+    try:
+        return await callback.message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except Exception as e:
+        logger.error(f"Error sending message: {e}")
+        await callback.answer("❌ Error sending message. Please try again.")
+        return None
+
 # --- FSM States ---
 class DepositStates(StatesGroup):
     waiting_for_amount = State()
