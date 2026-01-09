@@ -500,23 +500,30 @@ async def process_deposit_screenshot_invalid(message: types.Message):
 @dp.callback_query(F.data == "btn_accounts")
 async def process_accounts(callback: types.CallbackQuery):
     async with async_session() as session:
+        # Get all countries with stock counts in ONE query (performance optimization)
+        from sqlalchemy import func
+        
+        # Single efficient query with GROUP BY
+        stock_query = select(
+            Account.country_id,
+            func.count(Account.id).label('stock_count')
+        ).where(
+            Account.is_sold == False,
+            Account.type == "ID"
+        ).group_by(Account.country_id)
+        
+        stock_result = await session.execute(stock_query)
+        stock_by_country = {row.country_id: row.stock_count for row in stock_result}
+        
         # Get all countries
         stmt = select(Country)
         result = await session.execute(stmt)
         countries = result.scalars().all()
         
-        # Calculate stock for each country (only IDs)
+        # Build list of countries with stock
         countries_with_stock = []
         for country in countries:
-            stock_stmt = select(Account).where(
-                Account.country_id == country.id,
-                Account.is_sold == False,
-                Account.type == "ID"
-            )
-            stock_res = await session.execute(stock_stmt)
-            stock_count = len(stock_res.scalars().all())
-            
-            # Only include countries with available stock
+            stock_count = stock_by_country.get(country.id, 0)
             if stock_count > 0:
                 countries_with_stock.append({
                     'country': country,
