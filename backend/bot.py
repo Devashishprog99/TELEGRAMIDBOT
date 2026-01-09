@@ -592,7 +592,11 @@ async def process_country_selection(callback: types.CallbackQuery):
             builder.row(InlineKeyboardButton(text="🔙 Back", callback_data="btn_accounts"))
             builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
             
-            await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+            try:
+                await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Error editing message for no stock: {e}")
+                await callback.answer("❌ Out of stock")
             return
 
         # Get first available account to show phone number
@@ -628,7 +632,16 @@ async def process_country_selection(callback: types.CallbackQuery):
             callback_data="btn_main_menu"
         ))
         
-        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+        try:
+            await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Error editing message for country purchase confirmation: {e}")
+            # If edit fails, delete and send new message
+            try:
+                await callback.message.delete()
+            except:
+                pass
+            await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "btn_profile")
 async def process_profile(callback: types.CallbackQuery):
