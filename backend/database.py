@@ -19,11 +19,11 @@ if "postgresql" in DB_URL and "asyncpg" not in DB_URL:
 engine = create_async_engine(
     DB_URL, 
     echo=True,
-    pool_size=20,          # Increase pool size to handle concurrent requests
-    max_overflow=10,       # Allow up to 10 additional connections beyond pool_size
+    pool_size=40,          # Increased to 40 to handle bot + admin panel concurrently
+    max_overflow=20,       # Allow up to 20 additional connections (60 total)
     pool_pre_ping=True,    # Verify connections before using them
     pool_recycle=3600,     # Recycle connections every hour to prevent stale connections
-    pool_timeout=10        # Wait max 10 seconds for a connection, then raise error instead of hanging forever
+    pool_timeout=15        # Increased timeout to 15 seconds for high load scenarios
 )
 async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
