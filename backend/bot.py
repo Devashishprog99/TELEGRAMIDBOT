@@ -35,12 +35,14 @@ register_session_handlers(dp)
 
 # --- Global Error Handler for Maximum Stability ---
 @dp.errors()
-async def error_handler(update: types.Update, exception: Exception):
+async def error_handler(event: types.ErrorEvent):
     """
     Global error handler to prevent bot crashes.
     Catches all uncaught exceptions and logs them instead of crashing.
     """
-    logger.error(f"❌ Uncaught error in {event.__class__.__name__}: {exception}", exc_info=True)
+    update = event.update
+    exception = event.exception
+    logger.error(f"❌ Error handling update {update.update_id if update else 'Unknown'}: {exception}", exc_info=True)
     
     # Try to notify user of error if it's a callback or message update
     try:

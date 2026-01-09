@@ -17,7 +17,7 @@ from sqlalchemy import select
 logger = logging.getLogger(__name__)
 
 
-async def register_session_handlers(dp):
+def register_session_handlers(dp):
     """Register device session management handlers"""
     
     @dp.callback_query(F.data.startswith("manage_sess_"))
