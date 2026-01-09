@@ -30,6 +30,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# Register device session management handlers
+register_session_handlers(dp)
+
 # --- Global Error Handler for Maximum Stability ---
 @dp.errors()
 async def error_handler(update: types.Update, exception: Exception):
