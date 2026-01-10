@@ -43,17 +43,24 @@ async def get_active_sessions(session_string: str, api_id: int, api_hash: str):
                     "is_current": auth.current,
                 }
                 
-                # Calculate "last seen"
+                # Calculate "last seen" - convert timestamp to datetime
                 if auth.current:
                     device_info["last_seen"] = "Active now"
                 else:
-                    time_diff = datetime.utcnow() - auth.date_active
-                    if time_diff.seconds < 60:
-                        device_info["last_seen"] = f"{time_diff.seconds} seconds ago"
-                    elif time_diff.seconds < 3600:
-                        device_info["last_seen"] = f"{time_diff.seconds // 60} minutes ago"
+                    # Convert Unix timestamp to datetime
+                    from datetime import datetime as dt
+                    if isinstance(auth.date_active, int):
+                        date_active = dt.fromtimestamp(auth.date_active)
+                    else:
+                        date_active = auth.date_active
+                    
+                    time_diff = datetime.utcnow() - date_active
+                    if time_diff.total_seconds() < 60:
+                        device_info["last_seen"] = f"{int(time_diff.total_seconds())} seconds ago"
+                    elif time_diff.total_seconds() < 3600:
+                        device_info["last_seen"] = f"{int(time_diff.total_seconds() // 60)} minutes ago"
                     elif time_diff.days == 0:
-                        device_info["last_seen"] = f"{time_diff.seconds // 3600} hours ago"
+                        device_info["last_seen"] = f"{int(time_diff.total_seconds() // 3600)} hours ago"
                     else:
                         device_info["last_seen"] = f"{time_diff.days} days ago"
                 
