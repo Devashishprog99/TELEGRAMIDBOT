@@ -657,7 +657,11 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
             user = user_result.scalar_one_or_none()
             
             if not user:
-                await safe_send(callback, "❌ User not found! Please /start the bot first.", get_back_to_main())
+                await callback.message.edit_text(
+                    "❌ User not found! Please /start the bot first.",
+                    reply_markup=get_back_to_main(),
+                    parse_mode="HTML"
+                )
                 return
             
             # Get country and price
@@ -666,7 +670,11 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
             country = country_result.scalar_one_or_none()
             
             if not country:
-                await safe_send(callback, "❌ Country not found!", get_back_to_main())
+                await callback.message.edit_text(
+                    "❌ Country not found!",
+                    reply_markup=get_back_to_main(),
+                    parse_mode="HTML"
+                )
                 return
             
             # Check balance
@@ -675,7 +683,7 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
                 builder = InlineKeyboardBuilder()
                 builder.row(InlineKeyboardButton(text="➕ Add Balance", callback_data="btn_deposit"))
                 builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
-                await safe_send(callback, text, builder.as_markup())
+                await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
                 return
             
             # Get available account
@@ -688,7 +696,11 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
             account = account_result.scalar_one_or_none()
             
             if not account:
-                await safe_send(callback, "❌ <b>Out of Stock!</b>\n\nThis account was just sold. Please try another country.", get_back_to_main())
+                await callback.message.edit_text(
+                    "❌ <b>Out of Stock!</b>\n\nThis account was just sold. Please try another country.",
+                    reply_markup=get_back_to_main(),
+                    parse_mode="HTML"
+                )
                 return
             
             # Deduct balance & mark as sold
@@ -720,12 +732,16 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
         builder.row(InlineKeyboardButton(text="🛒 Buy More", callback_data="btn_accounts"))
         builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
         
-        await safe_send(callback, text, builder.as_markup())
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
         logger.info(f"✅ Purchase: User {user.telegram_id} bought {account.phone_number} for ₹{country.price}")
         
     except Exception as e:
         logger.error(f"❌ Purchase error: {e}", exc_info=True)
-        await safe_send(callback, "❌ <b>Purchase Failed!</b>\n\nAn error occurred. Please contact support.\nYour balance was not deducted.", get_back_to_main())
+        await callback.message.edit_text(
+            "❌ <b>Purchase Failed!</b>\n\nAn error occurred. Please contact support.\nYour balance was not deducted.",
+            reply_markup=get_back_to_main(),
+            parse_mode="HTML"
+        )
 
 
 @dp.callback_query(F.data == "btn_profile")
