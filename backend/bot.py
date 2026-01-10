@@ -2287,15 +2287,16 @@ async def request_channel_link(callback: types.CallbackQuery, state: FSMContext)
     await state.set_state(BotSettingsStates.waiting_for_channel_link)
 
 
+
 @dp.message(BotSettingsStates.waiting_for_channel_link)
 async def save_channel_link(message: types.Message, state: FSMContext):
     """Save new channel link to database"""
-    if message.text == "/cancel":
+    if message.text and message.text == "/cancel":
         await state.clear()
         await message.answer("❌ Cancelled.", reply_markup=get_main_menu(is_admin=True))
         return
     
-    channel_link = message.text.strip()
+    channel_link = message.text.strip() if message.text else ""
     
     # Basic validation
     if not channel_link.startswith("https://t.me/"):
