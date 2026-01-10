@@ -72,6 +72,59 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+@app.on_event("startup")
+async def startup_event():
+    """Set up webhook when app starts"""
+    
+    # Get webhook URL from environment or construct from Koyeb
+    webhook_url = os.getenv(
+        "WEBHOOK_URL",
+        "https://doubtful-chelsae-decstorroyal-43b44335.koyeb.app/webhook"
+    )
+    
+    bot_token = os.getenv("BOT_TOKEN")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Delete any existing webhook
+            async with session.get(
+                f"https://api.telegram.org/bot{bot_token}/deleteWebhook"
+            ) as response:
+                logger.info(f"🗑️ Deleted old webhook: {await response.json()}")
+            
+            # Set new webhook
+            async with session.post(
+                f"https://api.telegram.org/bot{bot_token}/setWebhook",
+                json={
+                    "url": webhook_url,
+                    "drop_pending_updates": True,
+                    "max_connections": 40
+                }
+            ) as response:
+                result = await response.json()
+                logger.info(f"🔄 Setting webhook to: {webhook_url}")
+            
+            # Verify webhook
+            async with session.get(
+                f"https://api.telegram.org/bot{bot_token}/getWebhookInfo"
+            ) as response:
+                info = await response.json()
+                if info['ok']:
+                    webhook_info = info['result']
+                    logger.info(
+                        f"✅ Webhook Info: "
+                        f"URL={webhook_info.get('url')} | "
+                        f"Custom Cert={webhook_info.get('has_custom_certificate')} | "
+                        f"Pending={webhook_info.get('pending_update_count')}"
+                    )
+                    
+                    if webhook_info.get('last_error_message'):
+                        logger.error(f"⚠️ Webhook Error: {webhook_info['last_error_message']}")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to set webhook: {e}")
+        # Don't crash the app, just log the error
+
 @app.get("/")
 async def health_check():
     return {"status": "ok", "mode": "webhook", "service": "Telegram Bot Backend"}
