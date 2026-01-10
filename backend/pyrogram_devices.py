@@ -24,10 +24,49 @@ async def get_active_sessions(session_string: str, api_id: int, api_hash: str):
             session_string=session_string,
             in_memory=True
         ) as client:
-            # Get active authorizations (sessions)
-            authorizations = await client.get_authorizations()
+            # Get active authorizations using raw function
+            from pyrogram.raw.functions.account import GetAuthorizations
+            authorizations = await client.invoke(GetAuthorizations())
             
-            for i, auth in enumerate(authorizations, 1):
+            for i, auth in enumerate(authorizations.authorizations, 1):
+                device_info = {
+                    "id": i,
+                    "hash": auth.hash,  # For termination
+                    "device_model": auth.device_model or "Unknown Device",
+                    "platform": auth.platform or "Unknown",
+                    "app_name": auth.app_name or "Telegram",
+                    "app_version": auth.app_version or "Unknown",
+                    "location": f"{auth.country or 'Unknown'}",
+                    "ip_address": auth.ip or "Unknown",
+                    "date_created": auth.date_created,
+                    "date_active": auth.date_active,
+                    "is_current": auth.current,
+                }
+                
+                # Calculate "last seen"
+                if auth.current:
+                    device_info["last_seen"] = "Active now"
+                else:
+                    time_diff = datetime.utcnow() - auth.date_active
+                    if time_diff.seconds < 60:
+                        device_info["last_seen"] = f"{time_diff.seconds} seconds ago"
+                    elif time_diff.seconds < 3600:
+                        device_info["last_seen"] = f"{time_diff.seconds // 60} minutes ago"
+                    elif time_diff.days == 0:
+                        device_info["last_seen"] = f"{time_diff.seconds // 3600} hours ago"
+                    else:
+                        device_info["last_seen"] = f"{time_diff.days} days ago"
+                
+                devices.append(device_info)
+                
+    except RPCError as e:
+        logger.error(f"Pyrogram error getting sessions: {e}")
+        raise Exception(f"Failed to fetch sessions: {e}")
+    except Exception as e:
+        logger.error(f"Error getting active sessions: {e}")
+        raise
+    
+    return devices
                 device_info = {
                     "id": i,
                     "hash": auth.hash,  # For termination
@@ -80,8 +119,9 @@ async def terminate_session(session_string: str, api_id: int, api_hash: str, ses
             session_string=session_string,
             in_memory=True
         ) as client:
-            # Terminate the specific authorization
-            await client.terminate_authorization(session_hash)
+            # Terminate the specific authorization using raw function
+            from pyrogram.raw.functions.account import ResetAuthorization
+            await client.invoke(ResetAuthorization(hash=session_hash))
             logger.info(f"✅ Terminated session with hash: {session_hash}")
             return True
             
@@ -105,8 +145,9 @@ async def terminate_all_except_current(session_string: str, api_id: int, api_has
             session_string=session_string,
             in_memory=True
         ) as client:
-            # Terminate all other sessions
-            result = await client.terminate_all_authorizations()
+            # Terminate all other sessions using raw function
+            from pyrogram.raw.functions.auth import ResetAuthorizations
+            result = await client.invoke(ResetAuthorizations())
             logger.info(f"✅ Terminated all other sessions")
             return result
             
