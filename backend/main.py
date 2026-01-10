@@ -177,6 +177,17 @@ async def startup_event():
             else:
                 logger.error(f"🚨 CRITICAL: Webhook setup failed after {max_retries} attempts!")
                 logger.error("Bot will NOT receive messages until webhook is manually fixed!")
+    
+    # Start background webhook monitor (checks every 5 minutes)
+    from backend.webhook_monitor import WebhookMonitor
+    logger.info("🔍 Starting automatic webhook monitor...")
+    monitor = WebhookMonitor(
+        bot_token=bot_token,
+        webhook_url=webhook_url,
+        check_interval=300  # 5 minutes
+    )
+    asyncio.create_task(monitor.start())
+    logger.info("✅ Webhook monitor active - auto-fixes if bot disconnects!")
 
 
 @app.get("/")
