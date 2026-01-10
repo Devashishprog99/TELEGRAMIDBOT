@@ -89,16 +89,16 @@ def get_main_menu(is_admin=False):
         InlineKeyboardButton(text="🆘 Support", callback_data="btn_help")
     )
     
-    # Row 3: Channel & Owner (fetch from Settings)
-    builder.row(
-        InlineKeyboardButton(text="📢 Channel", url="https://t.me/your_channel"),  # Will be dynamic
-        InlineKeyboardButton(text="👨‍💼 Owner", url="https://t.me/your_owner")  # Will be dynamic
-    )
-    
-    # Row 4: Main Menu
+    # Row 3: Main Menu
     builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
     
     if is_admin:
+        # Admin-only: Channel & Owner links
+        builder.row(
+            InlineKeyboardButton(text="📢 Channel", url="https://t.me/your_channel"),
+            InlineKeyboardButton(text="👨‍💼 Owner", url="https://t.me/your_owner")
+        )
+        
         admin_url = os.getenv("ADMIN_WEBAPP_URL", "https://telegram-bot-full.vercel.app")
         builder.row(
             InlineKeyboardButton(text="⚙️ Admin Web App", web_app=WebAppInfo(url=admin_url)),
