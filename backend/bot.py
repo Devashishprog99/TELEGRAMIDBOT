@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+from datetime import datetime
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -641,6 +642,91 @@ async def process_country_selection(callback: types.CallbackQuery):
         ))
         
         await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+
+@dp.callback_query(F.data.startswith("confirm_buy_"))
+async def confirm_purchase_handler(callback: types.CallbackQuery):
+    """CRITICAL HANDLER: Processes account purchases - This was MISSING!"""
+    try:
+        await callback.answer("Processing purchase...")
+        country_id = int(callback.data.split("_")[2])
+        
+        async with async_session() as session:
+            # Get user
+            user_stmt = select(User).where(User.telegram_id == callback.from_user.id)
+            user_result = await session.execute(user_stmt)
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                await safe_send(callback, "❌ User not found! Please /start the bot first.", get_back_to_main())
+                return
+            
+            # Get country and price
+            country_stmt = select(Country).where(Country.id == country_id)
+            country_result = await session.execute(country_stmt)
+            country = country_result.scalar_one_or_none()
+            
+            if not country:
+                await safe_send(callback, "❌ Country not found!", get_back_to_main())
+                return
+            
+            # Check balance
+            if user.balance < country.price:
+                text = f"❌ <b>Insufficient Balance!</b>\n\nRequired: ₹{country.price}\nYour Balance: ₹{user.balance}\nNeed: ₹{country.price - user.balance} more\n\n💰 Please add balance first!"
+                builder = InlineKeyboardBuilder()
+                builder.row(InlineKeyboardButton(text="➕ Add Balance", callback_data="btn_deposit"))
+                builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+                await safe_send(callback, text, builder.as_markup())
+                return
+            
+            # Get available account
+            account_stmt = select(Account).where(
+                Account.country_id == country_id,
+                Account.is_sold == False,
+                Account.type == "ID"
+            ).limit(1)
+            account_result = await session.execute(account_stmt)
+            account = account_result.scalar_one_or_none()
+            
+            if not account:
+                await safe_send(callback, "❌ <b>Out of Stock!</b>\n\nThis account was just sold. Please try another country.", get_back_to_main())
+                return
+            
+            # Deduct balance & mark as sold
+            user.balance -= country.price
+            account.is_sold = True
+            
+            # Create purchase record
+            purchase = Purchase(
+                user_id=user.id,
+                account_id=account.id,
+                amount=country.price,
+                created_at=datetime.utcnow()
+            )
+            session.add(purchase)
+            await session.commit()
+            await session.refresh(user)
+        
+        # Success message
+        text = "🎉 <b>Purchase Successful!</b>\n\n"
+        text += f"📱 <b>Phone Number:</b> <code>{account.phone_number}</code>\n"
+        if account.twofa_password:
+            text += f"🔐 <b>2FA Password:</b> <code>{account.twofa_password}</code>\n"
+        text += f"\n💰 <b>Amount Paid:</b> ₹{country.price}\n"
+        text += f"💵 <b>New Balance:</b> ₹{user.balance}\n\n"
+        text += "📋 <b>Next Steps:</b>\n1. Use the phone number to login\n2. OTP codes will be sent automatically\n3. Follow login instructions\n\n✅ Account saved in your purchase history!"
+        
+        builder = InlineKeyboardBuilder()
+        builder.row(InlineKeyboardButton(text="📜 My Purchases", callback_data="btn_purchases"))
+        builder.row(InlineKeyboardButton(text="🛒 Buy More", callback_data="btn_accounts"))
+        builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+        
+        await safe_send(callback, text, builder.as_markup())
+        logger.info(f"✅ Purchase: User {user.telegram_id} bought {account.phone_number} for ₹{country.price}")
+        
+    except Exception as e:
+        logger.error(f"❌ Purchase error: {e}", exc_info=True)
+        await safe_send(callback, "❌ <b>Purchase Failed!</b>\n\nAn error occurred. Please contact support.\nYour balance was not deducted.", get_back_to_main())
+
 
 @dp.callback_query(F.data == "btn_profile")
 async def process_profile(callback: types.CallbackQuery):
