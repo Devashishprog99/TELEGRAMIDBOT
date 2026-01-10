@@ -270,6 +270,33 @@ async def cmd_start(message: types.Message):
         except Exception:
             pass  # If even fallback fails, log it but don't crash
 
+@dp.callback_query(F.data == "check_membership")
+async def handle_check_membership(callback: types.CallbackQuery):
+    """Handle membership verification check"""
+    await callback.answer("Checking membership...")
+    
+    is_member = await check_channel_membership(callback.from_user.id)
+    
+    if is_member:
+        admin_id = int(os.getenv("ADMIN_ID", "0"))
+        is_admin = (callback.from_user.id == admin_id)
+        
+        text = f"✅ <b>Verified!</b> Welcome to the bot!\n\n"
+        text += f"👋 Hello {callback.from_user.first_name}!\n\n"
+        text += "Choose an option below:"
+        
+        await callback.message.edit_text(text, reply_markup=get_main_menu(is_admin), parse_mode="HTML")
+    else:
+        async with async_session() as session:
+            channel_setting = await session.execute(
+                select(Settings).where(Settings.key == "bot_channel_link")
+            )
+            setting = channel_setting.scalar_one_or_none()
+            channel_link = setting.value if setting else "https://t.me/yourchannel"
+        
+        await callback.answer("❌ You haven't joined yet!", show_alert=True)
+        await show_force_join_message(callback, channel_link)
+
 @dp.callback_query(F.data == "btn_deposit")
 async def process_deposit_start(callback: types.CallbackQuery, state: FSMContext):
     builder = InlineKeyboardBuilder()
