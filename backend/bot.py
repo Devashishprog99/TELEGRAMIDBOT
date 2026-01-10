@@ -2733,8 +2733,8 @@ async def manage_devices_handler(callback: types.CallbackQuery):
             from backend.pyrogram_devices import get_active_sessions
             
             # Get API credentials from environment
-            api_id = int(os.getenv("API_ID", "0"))
-            api_hash = os.getenv("API_HASH", "")
+            api_id = int(os.getenv("TELEGRAM_API_ID", "0"))
+            api_hash = os.getenv("TELEGRAM_API_HASH", "")
             
             if not account.session_data or api_id == 0 or not api_hash:
                 raise Exception("Missing session data or API credentials")
@@ -2779,7 +2779,7 @@ async def manage_devices_handler(callback: types.CallbackQuery):
             text += f"📞 <b>Account:</b> <code>{account.phone_number}</code>\n\n"
             text += f"⚠️ <b>Could not load devices</b>\n"
             text += f"<i>Error: {str(e)}</i>\n\n"
-            text += "💡 Make sure API_ID and API_HASH are set in environment variables."
+            text += "💡 Make sure TELEGRAM_API_ID and TELEGRAM_API_HASH are set in environment variables."
             
             builder = InlineKeyboardBuilder()
         
@@ -2817,8 +2817,8 @@ async def terminate_device_handler(callback: types.CallbackQuery):
         # Terminate using Pyrogram
         try:
             from backend.pyrogram_devices import terminate_session
-            api_id = int(os.getenv("API_ID", "0"))
-            api_hash = os.getenv("API_HASH", "")
+            api_id = int(os.getenv("TELEGRAM_API_ID", "0"))
+            api_hash = os.getenv("TELEGRAM_API_HASH", "")
             await terminate_session(account.session_data, api_id, api_hash, session_hash)
         except Exception as e:
             logger.error(f"Pyrogram error: {e}")
@@ -2861,8 +2861,8 @@ async def terminate_all_handler(callback: types.CallbackQuery):
         # Terminate all using Pyrogram
         try:
             from backend.pyrogram_devices import terminate_all_except_current
-            api_id = int(os.getenv("API_ID", "0"))
-            api_hash = os.getenv("API_HASH", "")
+            api_id = int(os.getenv("TELEGRAM_API_ID", "0"))
+            api_hash = os.getenv("TELEGRAM_API_HASH", "")
             await terminate_all_except_current(account.session_data, api_id, api_hash)
             
             await callback.answer("âœ… All devices terminated!", show_alert=True)
