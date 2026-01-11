@@ -15,6 +15,10 @@ import asyncio
 import os
 from fastapi import UploadFile, File, Form
 import aiohttp # For webhook setup in startup event
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # --- Schemas ---
 class CountryCreate(BaseModel):
