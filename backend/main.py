@@ -204,6 +204,10 @@ async def fix_webhook_endpoint():
     try:
         import os
         import aiohttp
+        import asyncio
+        import logging
+        
+        logger = logging.getLogger(__name__)
         
         bot_token = os.getenv("BOT_TOKEN")
         webhook_url = os.getenv("WEBHOOK_URL", "https://doubtful-chelsae-decstorroyal-43b44335.koyeb.app/webhook")
