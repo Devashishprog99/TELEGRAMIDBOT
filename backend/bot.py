@@ -130,7 +130,7 @@ async def check_channel_membership(user_id: int) -> bool:
             )
             setting = channel_setting.scalar_one_or_none()
             
-            if not setting or not setting.value:
+            if not setting or not setting.value or not str(setting.value).strip():
                 return True  # No channel configured
             
             channel_username = setting.value
@@ -2813,13 +2813,24 @@ async def process_help_button(callback: types.CallbackQuery):
             chan_stmt = select(Settings).where(Settings.key == "bot_channel_link")
             chan_res = await session.execute(chan_stmt)
             chan_setting = chan_res.scalar_one_or_none()
-            channel_link = chan_setting.value if chan_setting else "https://t.me/akhilportal"
+            
+            # Robust check: value must be truthy (not None and not empty string)
+            if chan_setting and chan_setting.value and str(chan_setting.value).strip():
+                channel_link = str(chan_setting.value).strip()
+            else:
+                channel_link = "https://t.me/akhilportal"
             
             # Fetch Owner Username
             owner_stmt = select(Settings).where(Settings.key == "bot_owner_username")
             owner_res = await session.execute(owner_stmt)
             owner_setting = owner_res.scalar_one_or_none()
-            owner_username = owner_setting.value if owner_setting else "@akhilportal"
+            
+            if owner_setting and owner_setting.value and str(owner_setting.value).strip():
+                owner_username = str(owner_setting.value).strip()
+            else:
+                owner_username = "@akhilportal"
+            
+            logger.info(f"Support Info: Link={channel_link}, Owner={owner_username}")
             
             text = "🆘 <b>Need Help?</b>\n\n"
             text += f"📢 <b>Official Channel:</b> <a href='{channel_link}'>Join Here</a>\n"
