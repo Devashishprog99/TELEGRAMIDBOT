@@ -856,7 +856,7 @@ async def verify_session_2fa(req: SessionVerify2FARequest):
 
 @app.get("/admin/settings/payment")
 async def get_payment_settings():
-    """Get current UPI ID and QR Code URL"""
+    """Get current UPI ID, QR Code URL, Channel Link, and Owner Username"""
     try:
         async with async_session() as session:
             # Fetch UPI ID
@@ -869,9 +869,21 @@ async def get_payment_settings():
             qr_res = await session.execute(qr_stmt)
             qr_setting = qr_res.scalar_one_or_none()
             
+            # Fetch Channel Link
+            chan_stmt = select(Settings).where(Settings.key == "bot_channel_link")
+            chan_res = await session.execute(chan_stmt)
+            chan_setting = chan_res.scalar_one_or_none()
+            
+            # Fetch Owner Username
+            owner_stmt = select(Settings).where(Settings.key == "bot_owner_username")
+            owner_res = await session.execute(owner_stmt)
+            owner_setting = owner_res.scalar_one_or_none()
+            
             return {
                 "upi_id": upi_setting.value if upi_setting else "",
-                "qr_image": qr_setting.value if qr_setting else ""
+                "qr_image": qr_setting.value if qr_setting else "",
+                "channel_link": chan_setting.value if chan_setting else "",
+                "owner_username": owner_setting.value if owner_setting else ""
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -879,21 +891,41 @@ async def get_payment_settings():
 @app.post("/admin/settings/payment")
 async def update_payment_settings(
     upi_id: str = Form(...),
+    channel_link: str = Form(None),
+    owner_username: str = Form(None),
     qr_image: UploadFile = File(None)
 ):
-    """Update UPI ID and optionally upload new QR Code"""
+    """Update UPI ID, Channel Link, Owner, and optionally upload new QR Code"""
     try:
         async with async_session() as session:
             # Update UPI ID
-            upi_stmt = select(Settings).where(Settings.key == "payment_upi_id")
-            upi_res = await session.execute(upi_stmt)
-            upi_setting = upi_res.scalar_one_or_none()
-            
-            if not upi_setting:
-                upi_setting = Settings(key="payment_upi_id", value=upi_id)
-                session.add(upi_setting)
+            stmt = select(Settings).where(Settings.key == "payment_upi_id")
+            res = await session.execute(stmt)
+            setting = res.scalar_one_or_none()
+            if not setting:
+                session.add(Settings(key="payment_upi_id", value=upi_id))
             else:
-                upi_setting.value = upi_id
+                setting.value = upi_id
+            
+            # Update Channel Link
+            if channel_link:
+                stmt = select(Settings).where(Settings.key == "bot_channel_link")
+                res = await session.execute(stmt)
+                setting = res.scalar_one_or_none()
+                if not setting:
+                    session.add(Settings(key="bot_channel_link", value=channel_link))
+                else:
+                    setting.value = channel_link
+            
+            # Update Owner Username
+            if owner_username:
+                stmt = select(Settings).where(Settings.key == "bot_owner_username")
+                res = await session.execute(stmt)
+                setting = res.scalar_one_or_none()
+                if not setting:
+                    session.add(Settings(key="bot_owner_username", value=owner_username))
+                else:
+                    setting.value = owner_username
             
             # Handle QR Image Upload if provided
             if qr_image:
@@ -906,108 +938,34 @@ async def update_payment_settings(
                 
                 file_ext = qr_image.filename.split(".")[-1]
                 file_path = f"payment_qr_{int(asyncio.get_event_loop().time())}.{file_ext}"
-                
-                # Ensure bucket exists (created in task plan)
                 bucket_name = "bot-uploads"
                 
                 try:
                     res = supabase.storage.from_(bucket_name).upload(
-                        file_path,
-                        content,
-                        {"content-type": qr_image.content_type}
+                        file_path, content, {"content-type": qr_image.content_type}
                     )
-                    
-                    # Get Public URL
                     public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
                     print(f"QR Uploaded to: {public_url}")
                     
-                    # Update DB
-                    qr_stmt = select(Settings).where(Settings.key == "payment_qr_image")
-                    qr_res = await session.execute(qr_stmt)
-                    qr_setting = qr_res.scalar_one_or_none()
-                    
-                    if not qr_setting:
-                        qr_setting = Settings(key="payment_qr_image", value=public_url)
-                        session.add(qr_setting)
+                    stmt = select(Settings).where(Settings.key == "payment_qr_image")
+                    res = await session.execute(stmt)
+                    setting = res.scalar_one_or_none()
+                    if not setting:
+                        session.add(Settings(key="payment_qr_image", value=public_url))
                     else:
-                        qr_setting.value = public_url
+                        setting.value = public_url
                         
                 except Exception as upload_err:
                     print(f"Upload Error: {upload_err}")
-                    raise HTTPException(status_code=500, detail=f"Failed to upload QR: {upload_err}")
+                    # Don't crash full request if upload fails, but log it
+                    pass
 
             await session.commit()
-            return {"success": True, "message": "Payment settings updated"}
+            return {"success": True, "message": "Settings updated successfully"}
             
     except Exception as e:
         print(f"Error updating settings: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# --- Settings API ---
-
-class PaymentSettings(BaseModel):
-    upi_id: str
-
-@app.get("/admin/settings/payment")
-async def get_payment_settings():
-    async with async_session() as session:
-        # Fetch UPI ID
-        res_upi = await session.execute(select(Settings).where(Settings.key == "payment_upi_id"))
-        upi_setting = res_upi.scalar_one_or_none()
-        
-        # Fetch QR Image Path
-        res_qr = await session.execute(select(Settings).where(Settings.key == "payment_qr_image"))
-        qr_setting = res_qr.scalar_one_or_none()
-        
-        return {
-            "upi_id": upi_setting.value if upi_setting else "",
-            "qr_image": qr_setting.value if qr_setting else None
-        }
-
-@app.post("/admin/settings/payment")
-async def update_payment_settings(settings: PaymentSettings):
-    async with async_session() as session:
-        # Upsert UPI ID
-        stmt = select(Settings).where(Settings.key == "payment_upi_id")
-        result = await session.execute(stmt)
-        setting = result.scalar_one_or_none()
-        
-        if setting:
-            setting.value = settings.upi_id
-        else:
-            session.add(Settings(key="payment_upi_id", value=settings.upi_id))
-            
-        await session.commit()
-        return {"success": True}
-
-from fastapi import UploadFile, File
-
-@app.post("/admin/settings/qr")
-async def upload_payment_qr(file: UploadFile = File(...)):
-    try:
-        file_ext = file.filename.split('.')[-1]
-        save_path = f"uploads/payment_qr.{file_ext}"
-        os.makedirs("uploads", exist_ok=True)
-        
-        with open(save_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
-            
-        # Update DB
-        async with async_session() as session:
-            stmt = select(Settings).where(Settings.key == "payment_qr_image")
-            result = await session.execute(stmt)
-            setting = result.scalar_one_or_none()
-            
-            if setting:
-                setting.value = save_path
-            else:
-                session.add(Settings(key="payment_qr_image", value=save_path))
-            await session.commit()
-            
-        return {"success": True, "path": save_path}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
 
 @app.get("/admin/deposits/enhanced")
 async def get_deposits_enhanced():

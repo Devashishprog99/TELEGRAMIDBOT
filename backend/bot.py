@@ -105,9 +105,12 @@ def get_main_menu(is_admin=False):
     if is_admin:
         # Admin-only: Links
         admin_url = os.getenv("ADMIN_WEBAPP_URL", "https://telegram-bot-full.vercel.app")
-        builder.row(
             InlineKeyboardButton(text="📊 Admin Web App", web_app=WebAppInfo(url=admin_url)),
             InlineKeyboardButton(text="💳 Payment Settings", web_app=WebAppInfo(url=admin_url + "/settings"))
+        )
+        # Row 5: Broadcast
+        builder.row(
+            InlineKeyboardButton(text="📢 Broadcast", callback_data="btn_broadcast")
         )
     
     return builder.as_markup()
@@ -2797,7 +2800,74 @@ async def manage_devices_handler(callback: types.CallbackQuery):
                     device_text += f"   📱 {device['platform']}\n\n"
                     text += device_text
                     
-                    # Add terminate button (except for current device)
+                    # Add terminate button (except for current device) (logic omitted for brevity in replace view)
+
+# === SUPPORT & BROADCAST HANDLERS ===
+
+@dp.callback_query(F.data == "btn_help")
+async def process_help_button(callback: types.CallbackQuery):
+    """Show support usage"""
+    try:
+        async with async_session() as session:
+            # Fetch Channel Link
+            chan_stmt = select(Settings).where(Settings.key == "bot_channel_link")
+            chan_res = await session.execute(chan_stmt)
+            chan_setting = chan_res.scalar_one_or_none()
+            channel_link = chan_setting.value if chan_setting else "https://t.me/akhilportal"
+            
+            # Fetch Owner Username
+            owner_stmt = select(Settings).where(Settings.key == "bot_owner_username")
+            owner_res = await session.execute(owner_stmt)
+            owner_setting = owner_res.scalar_one_or_none()
+            owner_username = owner_setting.value if owner_setting else "@akhilportal"
+            
+            text = "🆘 <b>Need Help?</b>\n\n"
+            text += f"📢 <b>Official Channel:</b> <a href='{channel_link}'>Join Here</a>\n"
+            text += f"👤 <b>Contact Support:</b> {owner_username}\n\n"
+            text += "<i>Click below to contact support directly.</i>"
+            
+            builder = InlineKeyboardBuilder()
+            builder.row(InlineKeyboardButton(text="💬 Contact Support", url=channel_link))
+            builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+            
+            await safe_edit_message(callback, text, reply_markup=builder.as_markup())
+            
+    except Exception as e:
+        logger.error(f"Support button error: {e}")
+        await callback.answer("❌ Error loading support info", show_alert=True)
+
+
+# Reuse Broadcast Logic from broadcast.py
+# We import the register function to ensure command works, 
+# AND we add a callback handler for the button that triggers the SAME state.
+
+from .broadcast import BroadcastStates
+
+@dp.callback_query(F.data == "btn_broadcast")
+async def process_broadcast_button(callback: types.CallbackQuery, state: FSMContext):
+    """Admin clicked Broadcast button"""
+    admin_id = int(os.getenv("ADMIN_TELEGRAM_ID", "0"))
+    
+    if callback.from_user.id != admin_id:
+        await callback.answer("❌ Admin only!", show_alert=True)
+        return
+
+    await bot.send_message(
+        callback.message.chat.id,
+        "📢 <b>Broadcast Message</b>\n\n"
+        "Send the message you want to broadcast to all users.\n\n"
+        "💡 <i>You can send text, photos, or videos.</i>\n"
+        "⚠️ <i>This will be sent to ALL users in the database.</i>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardBuilder().row(
+            InlineKeyboardButton(text="❌ Cancel", callback_data="btn_main_menu")
+        ).as_markup()
+    )
+    
+    # Set state from broadcast.py's state group
+    await state.set_state(BroadcastStates.waiting_for_message)
+    await callback.answer()
+
                     if not device['is_current']:
                         builder.row(InlineKeyboardButton(
                             text=f"❌ Terminate {device['device_model'][:20]}",
