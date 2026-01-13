@@ -105,6 +105,7 @@ def get_main_menu(is_admin=False):
     if is_admin:
         # Admin-only: Links
         admin_url = os.getenv("ADMIN_WEBAPP_URL", "https://telegram-bot-full.vercel.app")
+        builder.row(
             InlineKeyboardButton(text="📊 Admin Web App", web_app=WebAppInfo(url=admin_url)),
             InlineKeyboardButton(text="💳 Payment Settings", web_app=WebAppInfo(url=admin_url + "/settings"))
         )
