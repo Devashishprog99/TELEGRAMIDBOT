@@ -2800,8 +2800,24 @@ async def manage_devices_handler(callback: types.CallbackQuery):
                     device_text += f"   📍 {device['location']}\n"
                     device_text += f"   📱 {device['platform']}\n\n"
                     text += device_text
-                    
-                    # Add terminate button (except for current device) (logic omitted for brevity in replace view)
+            
+            text += "\n💡 Use buttons below to manage sessions"
+            
+        except Exception as e:
+            logger.error(f"Error fetching devices: {e}")
+            text = "❌ Could not load devices. Please try again later."
+            builder = InlineKeyboardBuilder()
+        
+        # Add common buttons
+        builder.row(InlineKeyboardButton(text="🔄 Refresh", callback_data=f"manage_devices_{account_id}"))
+        builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+        
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
+        
+    except Exception as e:
+        logger.error(f"Manage devices handler error: {e}", exc_info=True)
+        await callback.answer("❌ Error!", show_alert=True)
+
 
 # === SUPPORT & BROADCAST HANDLERS ===
 
@@ -2877,13 +2893,6 @@ async def process_broadcast_button(callback: types.CallbackQuery, state: FSMCont
     # Set state for waiting for broadcast message
     await state.set_state(BroadcastMessageStates.waiting_for_message)
     await callback.answer()
-
-        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
-        await callback.answer()
-        
-    except Exception as e:
-        logger.error(f"âŒ Manage devices error: {e}", exc_info=True)
-        await callback.answer("âŒ Error loading devices!", show_alert=True)
 
 
 @dp.callback_query(F.data.startswith("terminate_device_"))
