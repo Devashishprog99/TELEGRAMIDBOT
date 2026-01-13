@@ -1092,14 +1092,6 @@ async def process_buy_id(callback: types.CallbackQuery):
         )
         await callback.answer("Success!")
 
-@dp.message()
-async def catch_all_handler(message: types.Message):
-    await message.answer(
-        "⚠️ <b>Please start the bot first!</b>\n"
-        "Use the <b>/start</b> command to access the menu.",
-        parse_mode="HTML"
-    )
-
 @dp.callback_query(F.data == "btn_sessions")
 async def process_sessions(callback: types.CallbackQuery):
     async with async_session() as session:
