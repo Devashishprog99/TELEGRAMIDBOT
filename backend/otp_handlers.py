@@ -206,25 +206,7 @@ async def show_otp_waiting(message, phone_number, purchase_id, attempt=0):
         await show_otp_waiting(message, phone_number, purchase_id, attempt + 1)
         
     elif attempt < 24:  # 2 minutes total (24 * 5 sec = 120 sec)
-        # Still waiting for OTP
-        dots = "." * ((attempt % 3) + 1)
-        await message.edit_text(
-            f"🔄 <b>Waiting for OTP{dots}</b>\\n\\n"
-            f"📱 Phone: <code>{phone_number}</code>\\n\\n"
-            f"📋 <b>Instructions:</b>\\n"
-            f"1. Open Telegram app\\n"
-            f"2. Enter the phone number\\n"
-            f"3. Click 'Send Code'\\n"
-            f"4. We'll show you the code!\\n\\n"
-            f"<i>Auto-refreshing every 5 seconds... ({attempt + 1}/24)</i>",
-            reply_markup=InlineKeyboardBuilder()
-                .row(InlineKeyboardButton(
-                    text="⏹️ Stop Waiting",
-                    callback_data="btn_main_menu"
-                ))
-                .as_markup(),
-            parse_mode="HTML"
-        )
+        # Silently wait for OTP without showing instructions
         await asyncio.sleep(5)
         await show_otp_waiting(message, phone_number, purchase_id, attempt + 1)
     else:

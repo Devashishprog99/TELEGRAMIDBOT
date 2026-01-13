@@ -2922,26 +2922,34 @@ async def process_broadcast_message(message: types.Message, state: FSMContext):
     # Send to all users
     for user in users:
         try:
+            # Send message based on type
             if message.text:
-                await bot.send_message(user.telegram_id, message.text)
+                await bot.send_message(
+                    user.telegram_id,
+                    message.text,
+                    parse_mode=message.html_text if hasattr(message, 'html_text') else None
+                )
             elif message.photo:
                 await bot.send_photo(
                     user.telegram_id,
                     message.photo[-1].file_id,
-                    caption=message.caption
+                    caption=message.caption or ""
                 )
             elif message.video:
                 await bot.send_video(
                     user.telegram_id,
                     message.video.file_id,
-                    caption=message.caption
+                    caption=message.caption or ""
                 )
             elif message.document:
                 await bot.send_document(
                     user.telegram_id,
                     message.document.file_id,
-                    caption=message.caption
+                    caption=message.caption or ""
                 )
+            else:
+                # Skip unsupported message types
+                continue
             
             success_count += 1
             
@@ -2958,8 +2966,8 @@ async def process_broadcast_message(message: types.Message, state: FSMContext):
                 except:
                     pass  # Ignore "message not modified" errors
             
-            # Delay to avoid rate limits
-            await asyncio.sleep(0.05)
+            # Delay to avoid rate limits (Telegram allows ~30 messages/second)
+            await asyncio.sleep(0.04)
             
         except Exception as e:
             logger.error(f"Broadcast failed to {user.telegram_id}: {e}")
