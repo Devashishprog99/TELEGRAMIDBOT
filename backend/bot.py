@@ -2849,11 +2849,9 @@ async def process_help_button(callback: types.CallbackQuery):
         await callback.answer("❌ Error loading support info", show_alert=True)
 
 
-# Reuse Broadcast Logic from broadcast.py
-# We import the register function to ensure command works, 
-# AND we add a callback handler for the button that triggers the SAME state.
-
-from .broadcast import BroadcastStates
+# Broadcast States (defined locally to avoid import issues)
+class BroadcastMessageStates(StatesGroup):
+    waiting_for_message = State()
 
 @dp.callback_query(F.data == "btn_broadcast")
 async def process_broadcast_button(callback: types.CallbackQuery, state: FSMContext):
@@ -2876,8 +2874,8 @@ async def process_broadcast_button(callback: types.CallbackQuery, state: FSMCont
         ).as_markup()
     )
     
-    # Set state from broadcast.py's state group
-    await state.set_state(BroadcastStates.waiting_for_message)
+    # Set state for waiting for broadcast message
+    await state.set_state(BroadcastMessageStates.waiting_for_message)
     await callback.answer()
 
                     if not device['is_current']:
