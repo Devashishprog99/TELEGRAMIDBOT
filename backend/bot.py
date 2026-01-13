@@ -3083,9 +3083,11 @@ async def cmd_set_channel(message: types.Message, state: FSMContext):
     """Admin command to set channel link"""
     admin_id = int(os.getenv("ADMIN_TELEGRAM_ID", "0"))
     
-    if message.from_user.id != admin_id:
-        await message.answer("❌ This command is admin-only.")
-        return
+    # TEMP: Disabled for testing - anyone can use
+    # if message.from_user.id != admin_id:
+    #     await message.answer("❌ This command is admin-only.")
+    #     return
+    logger.info(f"User {message.from_user.id} used /setchannel (admin={admin_id})")
     
     await message.answer(
         "📢 <b>Set Channel Link</b>\n\n"
