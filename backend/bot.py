@@ -2878,36 +2878,6 @@ async def process_broadcast_button(callback: types.CallbackQuery, state: FSMCont
     await state.set_state(BroadcastMessageStates.waiting_for_message)
     await callback.answer()
 
-                    if not device['is_current']:
-                        builder.row(InlineKeyboardButton(
-                            text=f"❌ Terminate {device['device_model'][:20]}",
-                            callback_data=f"terminate_device_{account_id}_{device['hash']}"
-                        ))
-                
-                # Add "Terminate All" button
-                builder.row(InlineKeyboardButton(
-                    text="🗑️ Terminate All Other Devices",
-                    callback_data=f"terminate_all_{account_id}"
-                ))
-            else:
-                text += "❌ No active devices found\n"
-            
-        except Exception as e:
-            logger.error(f"Error fetching real devices: {e}")
-            # Fallback to simple message
-            text = f"📱 <b>Manage Devices</b>\n\n"
-            text += f"📞 <b>Account:</b> <code>{account.phone_number}</code>\n\n"
-            text += f"⚠️ <b>Could not load devices</b>\n"
-            text += f"<i>Error: {str(e)}</i>\n\n"
-            text += "💡 Make sure TELEGRAM_API_ID and TELEGRAM_API_HASH are set in environment variables."
-            
-            builder = InlineKeyboardBuilder()
-        
-        # Common buttons
-        builder.row(InlineKeyboardButton(text="🔄 Refresh Devices", callback_data=f"manage_devices_{account_id}"))
-        builder.row(InlineKeyboardButton(text="🔙 Back to Purchases", callback_data="btn_my_purchases"))
-        builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
-        
         await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
         await callback.answer()
         
