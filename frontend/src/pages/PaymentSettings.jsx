@@ -193,7 +193,7 @@ const PaymentSettings = () => {
                                     placeholder="https://t.me/yourchannel"
                                 />
                                 <p className="text-xs text-slate-500 mt-2">
-                                    Telegram channel link for updates and announcements
+                                    ⚠️ <strong>IMPORTANT:</strong> Enter YOUR actual Telegram channel URL, not the placeholder text!
                                 </p>
                             </div>
 
@@ -210,7 +210,7 @@ const PaymentSettings = () => {
                                     placeholder="@yourusername"
                                 />
                                 <p className="text-xs text-slate-500 mt-2">
-                                    Admin username for user support
+                                    ⚠️ <strong>IMPORTANT:</strong> Enter YOUR actual Telegram username (must start with @), not "@yourusername"!
                                 </p>
                             </div>
                         </div>
