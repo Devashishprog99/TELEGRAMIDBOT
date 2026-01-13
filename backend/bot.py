@@ -3269,33 +3269,14 @@ async def process_owner_username(message: types.Message, state: FSMContext):
 
 @dp.callback_query(F.data == "btn_broadcast")
 async def cmd_broadcast(callback: types.CallbackQuery, state: FSMContext):
-    """Admin broadcast button handler"""
-    logger.info(f"Broadcast button clicked by user {callback.from_user.id}")
-    admin_id = int(os.getenv("ADMIN_TELEGRAM_ID", "0"))
-    logger.info(f"Admin ID from env: {admin_id}")
-    
-    # TEMPORARILY DISABLED - ANYONE CAN USE FOR TESTING
-    # if callback.from_user.id != admin_id:
-    #     logger.warning(f"Non-admin {callback.from_user.id} tried to access broadcast")
-    #     await callback.answer("❌ Admin only!", show_alert=True)
-    #     return
-    
+    """ULTRA SIMPLE - Just show it works!"""
+    await callback.answer("✅ BROADCAST BUTTON WORKS!", show_alert=True)
     await callback.message.edit_text(
-        "📢 <b>Broadcast Message</b>\n\n"
-        "Send the message you want to broadcast to all users.\n\n"
-        "You can send:\n"
-        "• Text messages\n"
-        "• Photos with captions\n"
-        "• Videos with captions\n"
-        "• Documents\n\n"
-        "Send /cancel to abort.",
-        reply_markup=InlineKeyboardBuilder()
-            .row(InlineKeyboardButton(text="❌ Cancel", callback_data="btn_main_menu"))
-            .as_markup(),
+        "📢 <b>Broadcast Button Is Working!</b>\n\n"
+        "The button responded successfully!\n\n"
+        "If you see this, the handler is registered correctly.",
         parse_mode="HTML"
     )
-    await state.set_state(BroadcastMessageStates.waiting_for_message)
-    await callback.answer()
 
 
 @dp.message(BroadcastMessageStates.waiting_for_message)
