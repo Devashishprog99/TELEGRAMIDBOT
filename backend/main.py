@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from .database import init_db, async_session
 from .bot import bot, dp
 from .models import User, Country, Account, Purchase, Deposit, Settings
+from aiogram.types import Update
 from .session_manager import get_session_manager
 from .session_generator_service import get_session_generator
 from sqlalchemy import select, update, delete
@@ -200,7 +201,6 @@ async def health_check():
 
 
 # === CRITICAL: WEBHOOK ENDPOINT ===
-from aiogram.types import Update
 
 @app.post(WEBHOOK_PATH)
 async def webhook_handler(update: dict):
