@@ -55,25 +55,39 @@ async def lifespan(app: FastAPI):
     # Initialize DB
     await init_db()
     
-    # Set Webhook on Startup
-    # Set Webhook on Startup
-    webhook_url = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
-    print(f"🔄 Setting webhook to: {webhook_url}", flush=True)
-    
-    await bot.set_webhook(
-        url=webhook_url,
-        allowed_updates=dp.resolve_used_update_types(),
-        drop_pending_updates=True
-    )
-    
-    # Verify Webhook
-    info = await bot.get_webhook_info()
-    print(f"✅ Webhook Info: URL={info.url} | Custom Cert={info.has_custom_certificate} | Pending={info.pending_update_count}", flush=True)
+    # Set Webhook on Startup with error handling
+    try:
+        webhook_url = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
+        print(f"🔄 Setting webhook to: {webhook_url}", flush=True)
+        
+        await bot.set_webhook(
+            url=webhook_url,
+            allowed_updates=dp.resolve_used_update_types(),
+            drop_pending_updates=True
+        )
+        
+        # Verify Webhook
+        info = await bot.get_webhook_info()
+        print(f"✅ Webhook set successfully!", flush=True)
+        print(f"   URL: {info.url}", flush=True)
+        print(f"   Pending updates: {info.pending_update_count}", flush=True)
+        
+        if info.last_error_message:
+            print(f"⚠️ Last webhook error: {info.last_error_message}", flush=True)
+            print(f"   Error date: {info.last_error_date}", flush=True)
+            
+    except Exception as e:
+        print(f"❌ WEBHOOK ERROR: {e}", flush=True)
+        print(f"   URL attempted: {BASE_WEBHOOK_URL if 'BASE_WEBHOOK_URL' in locals() else 'NOT SET'}", flush=True)
+        print(f"   Bot will continue but webhook may not work!", flush=True)
     
     yield
     
     # Delete Webhook on Shutdown
-    await bot.delete_webhook()
+    try:
+        await bot.delete_webhook()
+    except:
+        pass
     await bot.session.close()
 
 app = FastAPI(lifespan=lifespan)
