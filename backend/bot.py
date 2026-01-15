@@ -3074,12 +3074,6 @@ async def terminate_all_handler(callback: types.CallbackQuery):
 
 
 # === BROADCAST HANDLERS ===
-(message: types.Message, state: FSMContext):
-    """Admin command to set channel link"""
-    admin_id = int(os.getenv("ADMIN_TELEGRAM_ID", "0"))
-    
-    # Admin check - only admin can use this command
-    if message.from_user.id != admin_id:
         await message.answer("❌ This command is admin-only.")
         return
     
