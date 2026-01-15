@@ -2822,61 +2822,42 @@ async def manage_devices_handler(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "btn_help")
 async def process_help_button(callback: types.CallbackQuery):
-    """Show support info - ONLY shows values set by /setchannel and /setowner commands"""
-    try:
-        async with async_session() as session:
-            # Fetch Channel Link - NO FALLBACK
-            chan_stmt = select(Settings).where(Settings.key == "bot_channel_link")
-            chan_res = await session.execute(chan_stmt)
-            chan_setting = chan_res.scalar_one_or_none()
-            
-            # Fetch Owner Username - NO FALLBACK
-            owner_stmt = select(Settings).where(Settings.key == "bot_owner_username")
-            owner_res = await session.execute(owner_stmt)
-            owner_setting = owner_res.scalar_one_or_none()
-            
-            # Check if values are set
-            has_channel = chan_setting and chan_setting.value and str(chan_setting.value).strip()
-            has_owner = owner_setting and owner_setting.value and str(owner_setting.value).strip()
-            
-            if not has_channel or not has_owner:
-                # NOT SET - Show error to admin
-                text = "⚠️ <b>Support Not Configured</b>\n\n"
-                text += "Admin needs to set support information using:\n\n"
-                text += "• <code>/setchannel</code> - Set channel link\n"
-                text += "• <code>/setowner</code> - Set owner username\n\n"
-                text += "<i>Contact admin to configure support.</i>"
-                
-                builder = InlineKeyboardBuilder()
-                builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
-                
-                await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
-                await callback.answer("Support not configured", show_alert=True)
-                return
-            
-            # Values ARE set - show them
-            channel_link = str(chan_setting.value).strip()
-            owner_username = str(owner_setting.value).strip()
-            
-            logger.info(f"Support Info: Channel={channel_link}, Owner={owner_username}")
-            
-            text = "🆘 <b>Need Help?</b>\n\n"
+    """Handle support button - uses ENVIRONMENT VARIABLES"""
+    
+    # Get values from ENVIRONMENT VARIABLES (set on Koyeb)
+    channel_link = os.getenv("BOT_CHANNEL_LINK", "").strip()
+    owner_username = os.getenv("BOT_OWNER_USERNAME", "").strip()
+    
+    logger.info(f"Support requested - Channel: {channel_link}, Owner: {owner_username}")
+    
+    # Build response
+    if channel_link or owner_username:
+        text = "🆘 <b>Support & Contact</b>\n\n"
+        
+        if channel_link:
             text += f"📢 <b>Official Channel:</b>\n{channel_link}\n\n"
+        
+        if owner_username:
             text += f"👤 <b>Contact Support:</b>\n{owner_username}\n\n"
-            text += "<i>Click below to visit our channel or contact support.</i>"
-            
-            builder = InlineKeyboardBuilder()
-            builder.row(InlineKeyboardButton(text="📢 Join Channel", url=channel_link))
-            builder.row(InlineKeyboardButton(text="👤 Contact Owner", url=f"https://t.me/{owner_username.lstrip('@')}"))
-            builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
-            
-            await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
-            await callback.answer()
-            
-    except Exception as e:
-        logger.error(f"Support button error: {e}")
-        await callback.answer("❌ Error loading support info", show_alert=True)
-
+        
+        text += "We're here to help! 💙"
+    else:
+        # If neither is set, show clear message
+        text = (
+            "🆘 <b>Support</b>\n\n"
+            "⚠️ Support contact information not configured.\n\n"
+            "Please contact the bot administrator."
+        )
+    
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
+    
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard.as_markup(),
+        parse_mode="HTML"
+    )
+    await callback.answer()
 
 # Broadcast States (defined locally to avoid import issues)
 class BroadcastMessageStates(StatesGroup):
@@ -3085,10 +3066,15 @@ async def terminate_all_handler(callback: types.CallbackQuery):
     except Exception as e:
         logger.error(f"âŒ Terminate all error: {e}", exc_info=True)
         await callback.answer("âŒ Error!", show_alert=True)
-# === ADMIN CONFIG COMMANDS ===
+# === ADMIN CONFIG COMMANDS REMOVED ===
+# Support values now configured via environment variables on Koyeb:
+# Set these in Koyeb Environment Variables:
+# - BOT_CHANNEL_LINK=https://t.me/yourchannel
+# - BOT_OWNER_USERNAME=@yourusername
 
-@dp.message(Command("setchannel"))
-async def cmd_set_channel(message: types.Message, state: FSMContext):
+
+# === BROADCAST HANDLERS ===
+(message: types.Message, state: FSMContext):
     """Admin command to set channel link"""
     admin_id = int(os.getenv("ADMIN_TELEGRAM_ID", "0"))
     
